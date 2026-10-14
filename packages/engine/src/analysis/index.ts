@@ -1,6 +1,7 @@
 import type { GameConfig } from '@copilot/config';
 import { priceList, unitCostFromBom, type PriceList } from '../bom.ts';
 import { currentDiscount } from '../finance/index.ts';
+import { calibrate, type Calibration } from '../finance/whatif.ts';
 import { clockOf, type Clock, type ClockOverride } from '../phase.ts';
 import type { Dataset } from '../types.ts';
 import { productionByRound, productionPlan, openOrders, type ProductionPlan, type RoundProduction } from './production.ts';
@@ -46,6 +47,7 @@ export type Analysis = {
   plan: ProductionPlan;
   valuation: ValuationTrend;
   discount: ReturnType<typeof currentDiscount>;
+  calibration: Calibration;
   /** which inputs are present – UI uses it to degrade gracefully */
   has: Record<'valuation' | 'market' | 'sales' | 'summary' | 'inventory' | 'production' | 'sourcing' | 'purchases' | 'finance', boolean>;
 };
@@ -75,6 +77,7 @@ export function analyze(ds: Dataset, cfg: GameConfig, ov: ClockOverride = {}): A
     plan: productionPlan(ds, cfg, clock, econLatest, path, Math.max(cfg.purchaseHorizonDays, 10)),
     valuation: valuationTrend(ds, cfg),
     discount: currentDiscount(ds, cfg),
+    calibration: calibrate(ds, cfg),
     has: {
       valuation: ds.valuation.length > 0,
       market: ds.market.length > 0,

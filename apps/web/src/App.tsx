@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { api, type StateResponse } from './api.ts';
 import { ageLabel, ageTone, Badge, cx, SidePanelProvider, useNow } from './components/ui.tsx';
 import { Ceny } from './pages/Ceny.tsx';
+import { Finance } from './pages/Finance.tsx';
 import { Ingest } from './pages/Ingest.tsx';
 import { Nastaveni } from './pages/Nastaveni.tsx';
 import { Strategie } from './pages/Strategie.tsx';
@@ -16,6 +17,7 @@ export const TABS: Tab[] = [
   { id: 'ingest', label: 'Ingest', render: (s) => <Ingest s={s} /> },
   { id: 'ceny', label: 'Ceny', render: (s) => <Ceny s={s} /> },
   { id: 'vyroba', label: 'Výroba', render: (s) => <Vyroba s={s} /> },
+  { id: 'finance', label: 'Finance', render: (s) => <Finance s={s} /> },
   { id: 'strategie', label: 'Strategie', render: (s) => <Strategie s={s} /> },
   { id: 'nastaveni', label: 'Nastavení', render: (s) => <Nastaveni s={s} /> },
 ];

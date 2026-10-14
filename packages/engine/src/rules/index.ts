@@ -4,16 +4,13 @@ import type { Rule, RuleCtx, RuleMeta } from './common.ts';
 import { R11, R12 } from './end.ts';
 import { R6, R7, R8, R9, R10 } from './run.ts';
 import { R4, R4b, R5, R15 } from './start.ts';
+import { R13, R14 } from './finance.ts';
 
 export * from './common.ts';
 export { needsFor } from './start.ts';
 
-/** Playbook order (also the order on the Strategie tab). Finance rules R13/R14 are appended in finance.ts. */
-export const RULES: Rule[] = [R1, R2, R3, R4, R4b, R15, R5, R6, R7, R8, R9, R10, R11, R12];
-
-export function registerRules(...rules: Rule[]) {
-  for (const r of rules) if (!RULES.some((x) => x.meta.id === r.meta.id)) RULES.push(r);
-}
+/** Playbook order (also the order on the Strategie tab). */
+export const RULES: Rule[] = [R1, R2, R3, R4, R4b, R15, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14];
 
 export const PRIORITY_ORDER: Record<ActionCard['priority'], number> = { kritické: 0, vysoká: 1, střední: 2 };
 

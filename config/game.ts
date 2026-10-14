@@ -1,5 +1,5 @@
-// Game parameters. Defaults only â€” every value can be overridden in UI (NastavenÃ­ hry), stored in SQLite.
-// Anything marked [OVÄšÅ˜IT] is listed in docs/assumptions.md.
+// Game parameters. Defaults only — every value can be overridden in UI (Nastavení hry), stored in SQLite.
+// Anything marked [OVĚŘIT] is listed in docs/assumptions.md.
 
 export type PresetName = 'intro' | 'extended';
 export type Area = 'N' | 'S' | 'W';
@@ -13,17 +13,17 @@ export type ChannelConfig = {
   dc: string;
   name: string;
   sizes: ('500g' | '1kg')[];
-  marketPer5DaysPerTeam: number; // â‚¬ â€“ briefing estimate
-  marketingSensitivity: 'nÃ­zkÃ¡' | 'stÅ™ednÃ­' | 'vysokÃ¡';
+  marketPer5DaysPerTeam: number; // € – briefing estimate
+  marketingSensitivity: 'nízká' | 'střední' | 'vysoká';
 };
 
 export type GameConfig = {
   preset: PresetName;
   roundLength: number;
-  rounds: number; // [OVÄšÅ˜IT] total rounds in the competition
+  rounds: number; // [OVĚŘIT] total rounds in the competition
   initial: { cash: number; loan: number; finishedGoodsPerSku: number };
-  capacityPerDay: number; // units/day [OVÄšÅ˜IT] intro machines â‚¬16M may mean 16k/day
-  capacityInUnits: boolean; // [OVÄšÅ˜IT] capacity counts boxes regardless of size
+  capacityPerDay: number; // units/day [OVĚŘIT] intro machines €16M may mean 16k/day
+  capacityInUnits: boolean; // [OVĚŘIT] capacity counts boxes regardless of size
   capacityCostPer1000: number;
   setup: { minHours: number; varHours: number; k: number; spend: number };
   lotMin: number;
@@ -32,14 +32,16 @@ export type GameConfig = {
   depreciationPerDayPerM: number;
   interestPerDayPerM: number;
   riskFreeRate: number; // 0.07
+  cashReserve: number; // R13: keep at least this much cash (ZFF7B liquidity) [OVĚŘIT]
+  extraCapacityUtilization: number; // what-if: share of added capacity that will actually sell (0..1)
   ratingTable: RatingRow[];
   defaultRating: string; // used when no finance snapshot exists
   pricing: {
-    step: number; // â‚¬ per price change
+    step: number; // € per price change
     lowCoverageDays: number; // R6
     highCoverageDays: number; // R7
     clearanceCoverageDays: number; // R12
-    maxAboveMarketPct: number; // R6: raise only if our price â‰¤ market Ã— (1+x)
+    maxAboveMarketPct: number; // R6: raise only if our price ≤ market × (1+x)
     includeFixedInFloor: boolean;
   };
   coverageWindowDays: number;
@@ -53,14 +55,14 @@ export type GameConfig = {
   marketingDcs: string[];
   channels: ChannelConfig[];
   areas: Area[];
-  recipes: Record<string, Recipe>; // by flavor digit '1'..'6' â€“ current BOM
+  recipes: Record<string, Recipe>; // by flavor digit '1'..'6' – current BOM
   recipeMin: { oats: number; wheat: number; flavor: number; mixedFruitNuts: number; mixedEachMin: number };
-  recipeAffectsDemand: boolean; // [OVÄšÅ˜IT]
+  recipeAffectsDemand: boolean; // [OVĚŘIT]
   rawPrices: Record<RawKey | PackKey, number>; // fallback when ProcSourcing missing
   storage: { finishedGoods: number; raw: number; packaging: number };
   valuationChartSkipDays: number;
-  calibrationTolerance: number; // 5 % â†’ banner
-  financeMatchTolerance: number; // 0.5 % â†’ âœ…
+  calibrationTolerance: number; // 5 % → banner
+  financeMatchTolerance: number; // 0.5 % → ✅
   dataAgeSec: { green: number; orange: number };
   ignoreVendors: string[]; // V03 = initial stock purchase in Intro
 };
@@ -69,27 +71,27 @@ export const RATING_TABLE: RatingRow[] = [
   { threshold: 0, rating: 'AAA+', premium: 3.0 },
   { threshold: -1e6, rating: 'AA+', premium: 3.75 },
   { threshold: -2e6, rating: 'AA', premium: 4.0 },
-  { threshold: -3e6, rating: 'AAâˆ’', premium: 4.25 },
+  { threshold: -3e6, rating: 'AA−', premium: 4.25 },
   { threshold: -4e6, rating: 'A+', premium: 4.75 },
   { threshold: -5e6, rating: 'A', premium: 5.0 },
-  { threshold: -6e6, rating: 'Aâˆ’', premium: 5.25 },
+  { threshold: -6e6, rating: 'A−', premium: 5.25 },
   { threshold: -7e6, rating: 'BBB+', premium: 5.75 },
   { threshold: -8e6, rating: 'BBB', premium: 6.0 },
-  { threshold: -9e6, rating: 'BBBâˆ’', premium: 6.25 },
+  { threshold: -9e6, rating: 'BBB−', premium: 6.25 },
   { threshold: -10e6, rating: 'BB+', premium: 6.75 },
   { threshold: -11e6, rating: 'BB', premium: 7.0 },
-  { threshold: -12e6, rating: 'BBâˆ’', premium: 7.25 },
+  { threshold: -12e6, rating: 'BB−', premium: 7.25 },
   { threshold: -13e6, rating: 'B+', premium: 7.75 },
   { threshold: -14e6, rating: 'B', premium: 8.0 },
-  { threshold: -15e6, rating: 'Bâˆ’', premium: 8.25 },
+  { threshold: -15e6, rating: 'B−', premium: 8.25 },
   { threshold: -16e6, rating: 'CCC+', premium: 9.0 },
   { threshold: -17e6, rating: 'CCC', premium: 10.0 },
-  { threshold: -18e6, rating: 'CCCâˆ’', premium: 11.0 },
+  { threshold: -18e6, rating: 'CCC−', premium: 11.0 },
   { threshold: -19e6, rating: 'CC', premium: 12.0 },
   { threshold: -20e6, rating: 'C', premium: 15.0 },
 ];
 
-// Current recipes: 35 % oats (R06), 35 % wheat (R05), 30 % flavor. Verified against Unit Cost for F01â€“F04, F11â€“F14.
+// Current recipes: 35 % oats (R06), 35 % wheat (R05), 30 % flavor. Verified against Unit Cost for F01–F04, F11–F14.
 const STD = (flavor: RawKey): Recipe => ({ R06: 0.35, R05: 0.35, [flavor]: 0.3 });
 
 const BASE: Omit<GameConfig, 'preset'> = {
@@ -106,8 +108,10 @@ const BASE: Omit<GameConfig, 'preset'> = {
   depreciationPerDayPerM: 10_000 / 24,
   interestPerDayPerM: 2_644.8 / 8,
   riskFreeRate: 0.07,
+  cashReserve: 500_000,
+  extraCapacityUtilization: 0.5,
   ratingTable: RATING_TABLE,
-  defaultRating: 'Aâˆ’',
+  defaultRating: 'A−',
   pricing: {
     step: 0.3,
     lowCoverageDays: 3,
@@ -126,9 +130,9 @@ const BASE: Omit<GameConfig, 'preset'> = {
   marketingEurPerRegionDay: 1_000,
   marketingDcs: ['14'],
   channels: [
-    { dc: '10', name: 'Hypermarkety', sizes: ['1kg'], marketPer5DaysPerTeam: 90_000, marketingSensitivity: 'nÃ­zkÃ¡' },
-    { dc: '12', name: 'Grocery chains', sizes: ['500g', '1kg'], marketPer5DaysPerTeam: 360_000, marketingSensitivity: 'stÅ™ednÃ­' },
-    { dc: '14', name: 'Independent grocers', sizes: ['500g'], marketPer5DaysPerTeam: 135_000, marketingSensitivity: 'vysokÃ¡' },
+    { dc: '10', name: 'Hypermarkety', sizes: ['1kg'], marketPer5DaysPerTeam: 90_000, marketingSensitivity: 'nízká' },
+    { dc: '12', name: 'Grocery chains', sizes: ['500g', '1kg'], marketPer5DaysPerTeam: 360_000, marketingSensitivity: 'střední' },
+    { dc: '14', name: 'Independent grocers', sizes: ['500g'], marketPer5DaysPerTeam: 135_000, marketingSensitivity: 'vysoká' },
   ],
   areas: ['N', 'S', 'W'],
   recipes: {
@@ -136,8 +140,8 @@ const BASE: Omit<GameConfig, 'preset'> = {
     '2': STD('R02'),
     '3': STD('R03'),
     '4': STD('R04'),
-    '5': { R06: 0.5, R05: 0.5 }, // Original [OVÄšÅ˜IT] â€“ not produced in fixtures
-    '6': { R06: 0.35, R05: 0.35, R01: 0.075, R02: 0.075, R03: 0.075, R04: 0.075 }, // Mixed [OVÄšÅ˜IT]
+    '5': { R06: 0.5, R05: 0.5 }, // Original [OVĚŘIT] – not produced in fixtures
+    '6': { R06: 0.35, R05: 0.35, R01: 0.075, R02: 0.075, R03: 0.075, R04: 0.075 }, // Mixed [OVĚŘIT]
   },
   recipeMin: { oats: 0.3, wheat: 0.2, flavor: 0.2, mixedFruitNuts: 0.3, mixedEachMin: 0.01 },
   recipeAffectsDemand: false,
@@ -156,7 +160,7 @@ export const PRESETS: Record<PresetName, GameConfig> = {
     ...BASE,
     preset: 'intro',
     initial: { cash: 2_000_000, loan: 0, finishedGoodsPerSku: 30_000 },
-    fixedCostPerDay: 14_600, // derived: gross margin âˆ’ net income [PRAVDÄšP.]
+    fixedCostPerDay: 14_600, // derived: gross margin − net income [PRAVDĚP.]
     defaultRating: 'AAA+',
   },
   // From the official Extended briefing.
@@ -184,7 +188,7 @@ function deepMerge(base: any, over: any): any {
 }
 
 export function setupHours(cfg: GameConfig, spend = cfg.setup.spend): number {
-  // SetupTime = 2 + (6 Ã— 250 000) / (250 000 + balance478000); balance 0 â†’ 8 h
+  // SetupTime = 2 + (6 × 250 000) / (250 000 + balance478000); balance 0 → 8 h
   const { minHours, varHours, k } = cfg.setup;
   return minHours + (varHours * k) / (k + Math.max(0, spend));
 }

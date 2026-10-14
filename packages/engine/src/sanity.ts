@@ -37,5 +37,13 @@ export function sanityChecks(ds: Dataset, cfg: GameConfig, a: Analysis): SanityW
   if (bad.length && ds.inventoryGameDay === a.clock.gameDay) {
     w.push({ id: 'stock-path', level: 'info', text: `Rekonstrukce skladu nesedí s Inventory u ${bad.map((b) => b.sku).join(', ')} – stockout analýza je orientační.` });
   }
+  const cal = a.calibration;
+  if (cal.deviation !== null && Math.abs(cal.deviation) > cfg.calibrationTolerance) {
+    w.push({
+      id: 'calibration',
+      level: 'warn',
+      text: `Vzorec valuace se liší od reportované o ${fmtNum(cal.deviation * 100, 1)} %. What-if používá korekční faktor ${fmtNum(cal.factor, 3)}. Zkontroluj opsaná čísla ve Finance.`,
+    });
+  }
   return w;
 }

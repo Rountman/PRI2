@@ -7,6 +7,7 @@ export * from './dataset.ts';
 export * from './phase.ts';
 export * from './bom.ts';
 export * from './finance/index.ts';
+export * from './finance/whatif.ts';
 export * from './analysis/index.ts';
 export * from './rules/index.ts';
 export * from './sanity.ts';

@@ -145,6 +145,39 @@ function ValuationChart({ s }: { s: StateResponse }) {
   );
 }
 
+function RatingPanel({ s }: { s: StateResponse }) {
+  const c = s.snapshot.analysis.calibration;
+  return (
+    <Panel
+      title="Rating a finance"
+      right={
+        <Info title="Rating">
+          <p>DebtLoading = Cash + AR − Úvěr − AP → rating → přirážka. Diskont = 7 % + přirážka; je ve jmenovateli valuace.</p>
+          <p>{c.source === 'finance' ? `Z finančního výkazu ze dne ${c.gameDay}.` : `Bez výkazu: rating z Nastavení (${c.rating}), profit dopočten z reportované valuace.`}</p>
+        </Info>
+      }
+    >
+      <div className="num flex flex-wrap items-baseline gap-x-6 gap-y-1">
+        <span>
+          <Badge tone="accent" className="text-base">{c.rating}</Badge> diskont {fmtPct(c.discount, 2)}
+        </span>
+        {c.debtLoading !== null && <span>DebtLoading {fmtShort(c.debtLoading)} €</span>}
+        {c.toUp !== null && <span className="text-good">↑ {fmtShort(c.toUp)} €</span>}
+        {c.toDown !== null && <span className="text-high">↓ rezerva {fmtShort(c.toDown)} €</span>}
+        {c.source === 'implied' && <Badge tone="high">odhad – nahraj výkaz ve Finance</Badge>}
+        {c.match === true && <Badge tone="good">✅ vzorec sedí</Badge>}
+        {c.match === false && <Badge tone="crit">❌ vzorec nesedí ({fmtPct(c.deviation, 1)})</Badge>}
+      </div>
+      {c.profit !== null && (
+        <div className="num mt-1 text-sm text-mute">
+          profit kumulativně {fmtEUR(c.profit)}
+          {c.source === 'implied' && ' (dopočteno)'}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 export function ValuationHeadline({ s }: { s: StateResponse }) {
   const v = s.snapshot.analysis.valuation;
   if (!v.latest) return <span className="text-mute">Valuace –</span>;
@@ -205,6 +238,7 @@ export function Velin({ s }: { s: StateResponse }) {
           </div>
         </section>
         <div className="space-y-4">
+          <RatingPanel s={s} />
           <Panel
             title="Valuace – trend"
             right={
