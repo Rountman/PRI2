@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./format": "./src/format.ts",
+    "./normalize": "./src/normalize.ts",
+    "./finance": "./src/finance/index.ts"
   },
   "dependencies": {
     "@copilot/config": "*",

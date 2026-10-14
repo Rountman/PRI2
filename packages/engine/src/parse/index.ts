@@ -4,6 +4,7 @@ import { readAny, type RawGrid } from './read.ts';
 import { REPORT_KINDS, SPECS } from './reports.ts';
 
 export { SPECS, REPORT_KINDS } from './reports.ts';
+export type { ColumnSpec, ReportSpec } from './reports.ts';
 export { readAny, readText, readWorkbook } from './read.ts';
 
 /** Header normalisation: case/whitespace/punctuation-insensitive. "D. Channel" → "dchannel" */
