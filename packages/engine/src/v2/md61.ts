@@ -6,6 +6,7 @@ import type { Demand, Model } from './model.ts';
 
 export type Md61Row = {
   sku: string;
+  mat: string; // SAP material, e.g. GG-F01
   label: string;
   stock: number;
   wip: number;
@@ -48,6 +49,7 @@ export function md61Plan(m: Model): Md61Plan {
     const lots = lotsFor(m, forecast, stock, wip);
     return {
       sku,
+      mat: m.mat(sku),
       label: skuLabel(sku),
       stock,
       wip,

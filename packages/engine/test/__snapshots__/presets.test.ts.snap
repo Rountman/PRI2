@@ -302,6 +302,7 @@ exports[`preset extended (CLAUDE.md kap. 2) > snapshot 1`] = `
     "packaging": 100,
     "raw": 1000,
   },
+  "teamCode": "GG",
   "valuationChartSkipDays": 2,
 }
 `;

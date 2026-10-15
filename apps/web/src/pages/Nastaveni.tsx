@@ -5,6 +5,7 @@ import { api, type StateResponse } from '../api.ts';
 import { cx, Panel } from '../components/ui.tsx';
 
 const LABELS: Record<string, string> = {
+  teamCode: 'Kód týmu (prefix materiálu, např. GG → GG-F01)',
   roundLength: 'Délka kola (dny)',
   rounds: 'Počet kol [OVĚŘIT]',
   'initial.cash': 'Počáteční cash €',

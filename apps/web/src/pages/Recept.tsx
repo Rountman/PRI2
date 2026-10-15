@@ -44,7 +44,7 @@ export function Recept({ s }: { s: StateResponse }) {
               const c1 = unitCostFromBom(r.sku, cfg, prices, best);
               return (
                 <tr key={r.sku} className="border-t border-line/60 align-top">
-                  <td className="py-1 font-bold">{r.sku}</td>
+                  <td className="py-1 font-bold">{r.mat}</td>
                   <td>{formatRecipe(cfg.recipes[f] ?? {})}</td>
                   <td className="text-right">{fmtPrice(c0)}</td>
                   <td>{formatRecipe(best)}</td>

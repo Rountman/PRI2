@@ -23,7 +23,7 @@ export function Marketing({ s }: { s: StateResponse }) {
         <tbody>
           {rows.map((r) => (
             <tr key={`${r.sku}${r.dc}`} className={cx('border-t border-line/60', !r.advise && 'text-mute')}>
-              <td className="py-1 font-bold">{r.sku}</td>
+              <td className="py-1 font-bold">{r.mat}</td>
               <td>{r.dc}</td>
               <td>{r.sensitivity}</td>
               <td className="text-right">{r.coverDays === null ? '–' : fmtNum(r.coverDays, 1)}</td>

@@ -26,6 +26,7 @@ export type FixedCosts = { periodDays: number; labor: number; overhead: number; 
 
 export type GameConfig = {
   preset: PresetName;
+  teamCode: string; // SAP material prefix, e.g. 'GG' → GG-F01 (empty = detect from data)
   roundLength: number;
   rounds: number; // [OVĚŘIT] total rounds in the competition
   initial: { cash: number; loan: number; machines: number; finishedGoodsPerSku: number };

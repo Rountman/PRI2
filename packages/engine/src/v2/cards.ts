@@ -14,12 +14,12 @@ function card(m: Model, c: Omit<ActionCard, 'impactEUR'>): ActionCard {
   return { ...c, impactEUR: c.profitEUR !== undefined ? m.toValuation(c.profitEUR) : undefined };
 }
 
-const forecastCopy = (rows: Md61Row[]) => rows.map((r) => ({ label: r.sku, value: sapValue(r.forecast, 0) }));
+const forecastCopy = (rows: Md61Row[]) => rows.map((r) => ({ label: r.mat, value: sapValue(r.forecast, 0) }));
 const mrpSteps = (md: Md61Plan, rows: Md61Row[]) => [
-  ...rows.map((r) => `MD61 ${r.sku} = ${fmtNum(r.forecast)} (→ planned ${r.lots.length ? r.lots.map((l) => fmtNum(l)).join(' + ') : '0'})`),
+  ...rows.map((r) => `MD61 ${r.mat} = ${fmtNum(r.forecast)} (→ planned ${r.lots.length ? r.lots.map((l) => fmtNum(l)).join(' + ') : '0'})`),
   'MD01: spusť MRP, zkontroluj, že planned orders sedí s tabulkou MD61.',
   'ME59N (Fixed Vendor prázdné) → po dodání surovin CO41.',
-  ...(md.capacity.cut.length ? [`Kapacita: kráceno ${md.capacity.cut.join(', ')} (nejnižší marže)`] : []),
+  ...rows.filter((r) => r.cut).map((r) => `Kapacita: ${r.mat} kráceno (nejnižší marže/ks z plánu)`),
 ];
 
 /** 5.5 Alerts – critical cards. Each fires only when its inputs exist. */
@@ -39,12 +39,41 @@ export function alerts(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] {
       if (!sold && cover >= lead) continue;
       const lostDays = sold ? (1 + lead) / 2 : Math.max(0, lead - cover);
       const profit = lostDays * d * Math.max(0, r.margin);
+      const when = sold ? `${r.mat} vyprodaný` : `${r.mat} dojde za ${d1(cover)} dne`;
+      const data = [
+        { label: 'Sklad', value: `${fmtNum(r.stock)} ks` },
+        { label: 'Rozpracovaná výroba', value: md.wipKnown ? `${fmtNum(r.wip)} ks` : 'neznámá (chybí ProductionReport)' },
+        { label: 'Poptávka / den', value: `${fmtNum(d)} ks${r.demand.boosted ? ` (× ${cfg.md61.stockoutBoost} – byl vyprodaný)` : ''}` },
+        { label: 'Marže / ks', value: fmtPrice(r.margin) },
+      ];
+      if (r.planned <= 0) {
+        // capacity is full and this SKU has the lowest margin → it cannot be produced now; sell the rest dearer
+        const raise = vk.rows.find((x) => x.sku === r.sku)?.cells.filter((c) => c.action === 'zvýšit') ?? [];
+        out.push(
+          card(m, {
+            id: `alert:stock:${r.sku}:d${g}`,
+            kind: 'alert',
+            priority: 'běžné',
+            title: `${when} – kapacita plná${raise.length ? ` → zvedni cenu ${raise.map((c) => `DC ${c.dc} na ${fmtPrice(c.recommended)}`).join(', ')}` : ''}`,
+            profitEUR: raise.reduce((x, c) => x + (c.delta ?? 0) * c.demandPerDay * Math.min(lead, m.remainingDays), 0),
+            tcode: raise.length ? 'VK32' : 'MD61',
+            steps: [
+              `Kapacita na ${md.horizon} dní je plná – ${r.mat} má nejnižší marži/ks, proto se teď nevyrábí.`,
+              ...raise.map((c) => `VK32: ${r.mat}, DC ${c.dc}: ${fmtPrice(c.current)} → ${sapValue(c.recommended)}`),
+              'Zbytek skladu prodej dráž; do výroby se vrátí, až se uvolní kapacita (nebo zvaž +kapacitu v Rozšířené → Investice).',
+            ],
+            copyValues: raise.map((c) => ({ label: `${r.mat} DC${c.dc}`, value: sapValue(c.recommended) })),
+            why: { summary: 'Vyprodá se dřív, než by stihla výroba – ale kapacitu má lepší marže jinde.', data, rule: '5.2 kapacitní kontrola + 5.5', confidence: 'pravděpodobné' },
+          }),
+        );
+        continue;
+      }
       out.push(
         card(m, {
           id: `alert:stock:${r.sku}:d${g}`,
           kind: 'alert',
           priority: 'kritické',
-          title: `${sold ? `${r.sku} vyprodaný` : `${r.sku} dojde za ${d1(cover)} dne`} → ${r.planned > 0 ? `MD61 ${r.sku} = ${fmtNum(r.forecast)}` : 'kapacita plná, kráceno (nižší marže)'}`,
+          title: `${when} → MD61 ${r.mat} = ${fmtNum(r.forecast)}`,
           profitEUR: profit,
           deadline: 'teď – lead time až ' + lead + ' dní',
           tcode: MRP,
@@ -52,12 +81,7 @@ export function alerts(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] {
           copyValues: forecastCopy([r]),
           why: {
             summary: sold ? 'Bez zásob se nic neprodá – každý den bez zboží = ztracená marže.' : `Sklad + rozpracovaná výroba vydrží méně než lead time surovin (${lead} dní).`,
-            data: [
-              { label: 'Sklad', value: `${fmtNum(r.stock)} ks` },
-              { label: 'Rozpracovaná výroba', value: md.wipKnown ? `${fmtNum(r.wip)} ks` : 'neznámá (chybí ProductionReport)' },
-              { label: 'Poptávka / den', value: `${fmtNum(d)} ks${r.demand.boosted ? ` (× ${cfg.md61.stockoutBoost} – byl vyprodaný)` : ''}` },
-              { label: 'Marže / ks', value: fmtPrice(r.margin) },
-            ],
+            data,
             rule: '5.5 SKU vyprodaný / dojde dřív než lead time',
             confidence: md.wipKnown ? 'pravděpodobné' : 'odhad',
           },
@@ -106,11 +130,11 @@ export function alerts(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] {
             id: `alert:cost:${r.sku}:${c.dc}:d${g}`,
             kind: 'alert',
             priority: 'kritické',
-            title: `Cena ${r.sku} v DC ${c.dc} (${fmtPrice(c.current)}) je pod nákladem ${fmtPrice(r.unitCost)} → VK32 ${fmtPrice(c.recommended)}`,
+            title: `Cena ${r.mat} v DC ${c.dc} (${fmtPrice(c.current)}) je pod nákladem ${fmtPrice(r.unitCost)} → VK32 ${fmtPrice(c.recommended)}`,
             profitEUR: (r.unitCost - (c.current ?? 0)) * c.demandPerDay * 5,
             tcode: 'VK32',
-            steps: [`VK32: ${r.sku}, DC ${c.dc} → ${sapValue(c.recommended)}`],
-            copyValues: [{ label: `${r.sku} DC${c.dc}`, value: sapValue(c.recommended) }],
+            steps: [`VK32: ${r.mat}, DC ${c.dc} → ${sapValue(c.recommended)}`],
+            copyValues: [{ label: `${r.mat} DC${c.dc}`, value: sapValue(c.recommended) }],
             why: {
               summary: 'Každý prodaný kus prodělává. Konečný sklad se oceňuje v nákladech – neprodávat pod nákladem.',
               data: [
@@ -162,7 +186,7 @@ export function alerts(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] {
       const skus = md.rows.filter((r) => allowedDcs(cfg, r.sku).includes(ch.dc) && (r.stock > 0 || cfg.assortment.includes(r.sku)));
       if (!skus.length) continue;
       if (ds.sales.some((s) => s.dc === ch.dc && s.gameDay > g - W)) continue;
-      const cells = vk.rows.flatMap((r) => r.cells.filter((c) => c.dc === ch.dc && skus.some((s) => s.sku === r.sku)).map((c) => ({ sku: r.sku, c, cost: r.unitCost })));
+      const cells = vk.rows.flatMap((r) => r.cells.filter((c) => c.dc === ch.dc && skus.some((s) => s.sku === r.sku)).map((c) => ({ sku: r.mat, c, cost: r.unitCost })));
       const ratio = cells.length ? cells.reduce((x, y) => x + (y.c.recommended - y.cost) / y.c.recommended, 0) / cells.length : 0.5;
       out.push(
         card(m, {
@@ -205,7 +229,7 @@ export function roundCards(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] 
         id: `md61:d${g}`,
         kind: 'md61',
         priority: 'běžné',
-        title: `MRP cyklus: ${planned.map((r) => `${r.sku} = ${fmtNum(r.forecast)}`).join(', ')}`,
+        title: `MRP cyklus: ${planned.map((r) => `${r.mat} = ${fmtNum(r.forecast)}`).join(', ')}`,
         profitEUR: shortfall,
         tcode: MRP,
         steps: mrpSteps(md, planned),
@@ -213,7 +237,7 @@ export function roundCards(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] 
         why: {
           summary: `Prognóza na ${md.horizon} dní (příští MRP + lead time). Pokryje poptávku, kterou sklad a výroba nepokryjí.`,
           data: [
-            ...md.rows.map((r) => ({ label: r.sku, value: `poptávka ${fmtNum(r.demand.perDay)}/den · sklad ${fmtNum(r.stock)} · výroba ${fmtNum(r.wip)} → ${fmtNum(r.forecast)}` })),
+            ...md.rows.map((r) => ({ label: r.mat, value: `poptávka ${fmtNum(r.demand.perDay)}/den · sklad ${fmtNum(r.stock)} · výroba ${fmtNum(r.wip)} → ${fmtNum(r.forecast)}` })),
             { label: 'Kapacita', value: `${fmtNum(md.capacity.used)} / ${fmtNum(md.capacity.available)} ks (${md.capacity.setups} setupy)` },
           ],
           rule: '5.2 MD61',
@@ -236,11 +260,11 @@ export function roundCards(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] 
         id: `vk32:${r.sku}:d${g}`,
         kind: 'vk32',
         priority: 'běžné',
-        title: `${up ? 'Zvedni' : 'Sniž'} cenu ${r.sku} ${ch.map((c) => `v DC ${c.dc} na ${fmtPrice(c.recommended)}`).join(', ')}`,
+        title: `${up ? 'Zvedni' : 'Sniž'} cenu ${r.mat} ${ch.map((c) => `v DC ${c.dc} na ${fmtPrice(c.recommended)}`).join(', ')}`,
         profitEUR: profit,
         tcode: `VK32 · DC ${ch.map((c) => c.dc).join('/')}`,
-        steps: ch.map((c) => `VK32: ${r.sku}, DC ${c.dc}: ${fmtPrice(c.current)} → ${sapValue(c.recommended)}`),
-        copyValues: ch.map((c) => ({ label: `${r.sku} DC${c.dc}`, value: sapValue(c.recommended) })),
+        steps: ch.map((c) => `VK32: ${r.mat}, DC ${c.dc}: ${fmtPrice(c.current)} → ${sapValue(c.recommended)}`),
+        copyValues: ch.map((c) => ({ label: `${r.mat} DC${c.dc}`, value: sapValue(c.recommended) })),
         why: {
           summary: ch[0].reason,
           data: [
@@ -266,12 +290,12 @@ export function roundCards(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] 
         id: `bom:locked:d${g}`,
         kind: 'alert',
         priority: 'běžné',
-        title: `Recept už nejde měnit u ${locked.map((r) => r.sku).join(', ')}`,
+        title: `Recept už nejde měnit u ${locked.map((r) => r.mat).join(', ')}`,
         tcode: 'ZCS02',
         steps: ['ZCS02 jde jen u SKU s ≤ 1 000 ks skladem a bez výrobních zakázek.', 'Nevalidní BOM = produkt se neprodá.'],
         why: {
           summary: 'Změnu receptu plánuj u SKU, které doprodáš, ještě před dalším MRP.',
-          data: locked.map((r) => ({ label: r.sku, value: `sklad ${fmtNum(r.stock)} · výroba ${fmtNum(r.wip)}` })),
+          data: locked.map((r) => ({ label: r.mat, value: `sklad ${fmtNum(r.stock)} · výroba ${fmtNum(r.wip)}` })),
           rule: '5.5 BOM zamčený',
           confidence: 'jisté',
         },

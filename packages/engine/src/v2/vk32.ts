@@ -20,6 +20,7 @@ export type Vk32Cell = {
 
 export type Vk32Row = {
   sku: string;
+  mat: string;
   label: string;
   unitCost: number;
   unitCostSource: string;
@@ -85,7 +86,7 @@ export function vk32Table(m: Model): Vk32Table {
         warnFixed: p.warnFixedPerUnit && recommended < unitCost + m.fixedPerUnit,
       };
     });
-    return { sku, label: skuLabel(sku), unitCost, unitCostSource: m.a.costs[sku]?.source ?? 'BOM', fixedPerUnit: m.fixedPerUnit, anchor: anchor?.price ?? null, stock, coverDays: cover, cells };
+    return { sku, mat: m.mat(sku), label: skuLabel(sku), unitCost, unitCostSource: m.a.costs[sku]?.source ?? 'BOM', fixedPerUnit: m.fixedPerUnit, anchor: anchor?.price ?? null, stock, coverDays: cover, cells };
   });
   return { pregame: m.pregame, rows, dcs: cfg.channels.map((c) => c.dc), anchorDay };
 }

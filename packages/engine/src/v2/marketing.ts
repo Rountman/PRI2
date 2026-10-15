@@ -2,7 +2,7 @@
 import type { Area } from '@copilot/config';
 import { allowedDcs, type Model } from './model.ts';
 
-export type MarketingRow = { sku: string; dc: string; sensitivity: string; coverDays: number | null; area: Area | null; eurPerDay: number; advise: boolean; reason: string };
+export type MarketingRow = { sku: string; mat: string; dc: string; sensitivity: string; coverDays: number | null; area: Area | null; eurPerDay: number; advise: boolean; reason: string };
 
 export function marketingTable(m: Model): MarketingRow[] {
   const { cfg, ds } = m;
@@ -20,6 +20,7 @@ export function marketingTable(m: Model): MarketingRow[] {
       const advise = sensitive && hasStock;
       out.push({
         sku,
+        mat: m.mat(sku),
         dc,
         sensitivity: ch.marketingSensitivity,
         coverDays: cover,

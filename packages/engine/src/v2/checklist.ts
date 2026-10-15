@@ -11,6 +11,7 @@ import type { Vk32Table } from './vk32.ts';
 export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): ActionCard[] {
   const { cfg } = m;
   const skus = md61.rows.map((r) => r.sku);
+  const mats = md61.rows.map((r) => r.mat);
   const sh = (x: number) => fmtNum(x, 1);
   const setup = setupMarginalTable(cfg, { currentSpend: m.setupSpend, changeoversPerRound: cfg.md61.changeoversPerRound, marginPerUnit: avgMargin(m), remainingRounds: cfg.rounds });
   const rec = setup.filter((s) => s.recommended).at(-1);
@@ -24,13 +25,13 @@ export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): Act
       id: 'start:1-sortiment',
       kind: 'checklist',
       priority: 'běžné',
-      title: `1. Sortiment: ${skus.join(', ')}`,
+      title: `1. Sortiment: ${mats.join(', ')}`,
       tcode: 'Nastavení',
       steps: [
-        ...skus.map((s) => `${skuLabel(s)} → DC ${allowedDcs(cfg, s).join(' + ')}`),
+        ...skus.map((s) => `${m.mat(s)} ${skuLabel(s)} → DC ${allowedDcs(cfg, s).join(' + ')}`),
         'Sortiment jde změnit v Rozšířené → Nastavení. Po prvním ZMARKET (den 5) ho appka přehodnotí.',
       ],
-      copyValues: skus.map((s) => ({ label: 'SKU', value: s })),
+      copyValues: mats.map((s) => ({ label: 'Materiál', value: s })),
       why: {
         summary: 'V cvičné hře měly tyto SKU nejvyšší ceny i objemy. 4 SKU pokryjí všechny 3 DC s málo přestavbami.',
         data: [
@@ -51,7 +52,7 @@ export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): Act
       tcode: 'ZCS02',
       deadline: 'před prvním MD01',
       steps: [
-        ...skus.map((s) => `${s}: ${formatRecipe(cfg.recipes[skuFlavor(s)] ?? {})}`),
+        ...skus.map((s) => `${m.mat(s)}: ${formatRecipe(cfg.recipes[skuFlavor(s)] ?? {})}`),
         'Recept nejde změnit, když má produkt > 1 000 ks skladem nebo výrobní zakázky.',
         'Levnější recept: Rozšířené → Recept (může snížit poptávku).',
       ],
@@ -72,8 +73,8 @@ export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): Act
       priority: 'běžné',
       title: `3. VK32 startovní ceny (500 g ≈ ${fmtPrice(cfg.startPrices['500g'])}, 1 kg ≈ ${fmtPrice(cfg.startPrices['1kg'])})`,
       tcode: 'VK32',
-      steps: [...vk32.rows.flatMap((r) => r.cells.map((c) => `${r.sku} · DC ${c.dc} → ${fmtPrice(c.recommended)}`)), 'Ceny jen tam, kde se balení prodává (DC 10 jen 1 kg, DC 14 jen 500 g).'],
-      copyValues: vk32.rows.flatMap((r) => r.cells.map((c) => ({ label: `${r.sku} DC${c.dc}`, value: sapValue(c.recommended) }))),
+      steps: [...vk32.rows.flatMap((r) => r.cells.map((c) => `${r.mat} · DC ${c.dc} → ${fmtPrice(c.recommended)}`)), 'Ceny jen tam, kde se balení prodává (DC 10 jen 1 kg, DC 14 jen 500 g).'],
+      copyValues: vk32.rows.flatMap((r) => r.cells.map((c) => ({ label: `${r.mat} DC${c.dc}`, value: sapValue(c.recommended) }))),
       why: {
         summary: 'Bez ceny ve VK32 se v kanálu neprodá nic. DC 10 je velmi cenově citlivé (−0,30 €), DC 14 snese víc (+0,30 €).',
         data: cfg.channels.map((c) => ({ label: `DC ${c.dc} ${c.name}`, value: `cena ${c.priceSensitivity}, reklama ${c.marketingSensitivity}` })),
@@ -105,13 +106,13 @@ export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): Act
       id: 'start:5-md61',
       kind: 'checklist',
       priority: 'kritické',
-      title: `5. MD61 prognóza 1. cyklu: ${skus.map((s) => `${s} = ${fmtNum(cfg.md61.firstCycleQty)}`).join(', ')}`,
+      title: `5. MD61 prognóza 1. cyklu: ${mats.map((s) => `${s} = ${fmtNum(cfg.md61.firstCycleQty)}`).join(', ')}`,
       tcode: 'MD61',
       steps: [
-        ...md61.rows.map((r) => `${r.sku}: ${fmtNum(r.forecast)} (→ planned ${r.lots.map((l) => fmtNum(l)).join(' + ')})`),
+        ...md61.rows.map((r) => `${r.mat}: ${fmtNum(r.forecast)} (→ planned ${r.lots.map((l) => fmtNum(l)).join(' + ')})`),
         `Celkem ${fmtNum(cap.units)} ks ≈ ${sh(cap.units / cap.perDay)} dní výroby + ${cap.setups} setupy (${sh(cap.setupUnits / cap.perDay)} dne)`,
       ],
-      copyValues: md61.rows.map((r) => ({ label: r.sku, value: sapValue(r.forecast, 0) })),
+      copyValues: md61.rows.map((r) => ({ label: r.mat, value: sapValue(r.forecast, 0) })),
       why: {
         summary: 'Sklad je na startu prázdný – bez prognózy MRP nic nenaplánuje a bez zásob se nic neprodá.',
         data: [

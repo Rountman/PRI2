@@ -18,6 +18,17 @@ export const sapOrder = (skus: Iterable<string>) => {
   return SKUS.filter((s) => set.has(s));
 };
 
+/** SAP material number with team prefix: 'GG' + 'F01' → 'GG-F01'. */
+export const sapMaterial = (team: string, sku: string) => (team ? `${team}-${sku}` : sku);
+
+/** Team code from settings, else the most common prefix in our own reports. */
+export function teamOf(cfg: GameConfig, ds: Dataset): string {
+  if (cfg.teamCode) return cfg.teamCode;
+  const n = new Map<string, number>();
+  for (const r of [...ds.sales, ...ds.inventory, ...ds.production]) if (r.teamCode) n.set(r.teamCode, (n.get(r.teamCode) ?? 0) + 1);
+  return [...n.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
+}
+
 export function startPrice(cfg: GameConfig, sku: string, dc: string): number {
   const o = cfg.startPrices.overrides?.[`${sku}:${dc}`];
   if (o) return o;
@@ -113,6 +124,8 @@ export type Model = {
   cfg: GameConfig;
   a: Analysis;
   pregame: boolean;
+  team: string;
+  mat: (sku: string) => string; // SAP material number
   gameDay: number;
   skus: string[]; // SAP order
   demand: Record<string, Demand>;
@@ -161,6 +174,7 @@ export function buildModel(ds: Dataset, cfg: GameConfig, a: Analysis): Model {
     margin[sku] = round2(price[sku] - unitCost[sku]);
   }
   const finance = latestFinance(ds);
+  const team = teamOf(cfg, ds);
   const setupSpend = Math.max(cfg.setup.spend, finance?.setupSpend ?? 0);
   const remainingDays = a.clock.daysLeftInGame;
   let kg = 0;
@@ -176,6 +190,8 @@ export function buildModel(ds: Dataset, cfg: GameConfig, a: Analysis): Model {
     cfg,
     a,
     pregame,
+    team,
+    mat: (sku) => sapMaterial(team, sku),
     gameDay: g,
     skus,
     demand,

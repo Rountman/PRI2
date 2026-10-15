@@ -31,6 +31,7 @@ const STD = (flavor: RawKey): Recipe => ({ R06: 0.35, R05: 0.35, [flavor]: 0.3 }
 
 const EXTENDED: GameConfig = {
   preset: 'extended',
+  teamCode: 'GG',
   roundLength: 20,
   rounds: 4, // [OVĚŘIT] u organizátora
   initial: { cash: 2_000_000, loan: 8_000_000, machines: 24_000_000, finishedGoodsPerSku: 0 },

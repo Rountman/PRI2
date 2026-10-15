@@ -79,6 +79,21 @@ describe('Před hrou (no data)', () => {
   });
 });
 
+describe('team code (SAP material GG-F01)', () => {
+  it('preset GG → all SAP texts use GG-Fxx', () => {
+    const s = buildSnapshot(emptyDataset(), ext);
+    expect(s.md61.rows.map((r) => r.mat)).toEqual(['GG-F02', 'GG-F03', 'GG-F12', 'GG-F13']);
+    expect(s.cards[0].title).toBe('1. Sortiment: GG-F02, GG-F03, GG-F12, GG-F13');
+    expect(s.cards.find((c) => c.id === 'start:5-md61')!.copyValues![0]).toEqual({ label: 'GG-F02', value: '48000' });
+    expect(s.vk32.rows[0].mat).toBe('GG-F02');
+  });
+
+  it('empty team code → detected from our reports', () => {
+    const s = buildSnapshot(fixtureDataset(), resolveConfig({ preset: 'intro', teamCode: '' }));
+    expect(s.md61.rows[0].mat).toMatch(/^GG-F\d\d$/);
+  });
+});
+
 describe('setup marginal table', () => {
   it('stops at the first step below payback', () => {
     const t = setupMarginalTable(ext, { currentSpend: 0, changeoversPerRound: 10, marginPerUnit: 4.5, remainingRounds: 4 });
@@ -147,6 +162,21 @@ describe('fixtures (intro preset)', () => {
 
   it.each(ALL)('without %s', (f) => {
     check(fixtureDataset([f]));
+  });
+
+  it('SKU cut to zero by capacity: no critical "MD61 = x" card, MD61 notes only on the cut SKU', () => {
+    const s = buildSnapshot(only(BASIC), cfg);
+    const zero = s.md61.rows.filter((r) => r.planned === 0 && r.cut).map((r) => r.mat);
+    expect(zero.length).toBeGreaterThan(0);
+    for (const c of s.cards) {
+      for (const z of zero) {
+        if (!c.title.startsWith(z)) continue;
+        expect(c.priority).toBe('běžné');
+        expect(c.title).toMatch(/kapacita plná/);
+        expect(c.title).not.toMatch(/MD61/);
+      }
+      for (const st of c.steps.filter((x) => x.startsWith('Kapacita:'))) expect(c.steps.some((x) => x.startsWith(`MD61 ${st.split(' ')[1]}`))).toBe(true);
+    }
   });
 
   it('tight capacity cuts the lowest-margin SKU first', () => {

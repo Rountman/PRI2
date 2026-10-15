@@ -75,8 +75,8 @@ export function Md61Table({ s }: { s: StateResponse }) {
         <tbody>
           {md.rows.map((r) => (
             <tr key={r.sku} className={cx('border-t border-line/60', r.cut && 'text-amber-200')}>
-              <td className="py-1.5 font-bold" title={r.label}>
-                {r.sku}
+              <td className="py-1.5" title={r.label}>
+                <CopyValue value={r.mat} className="font-bold" />
               </td>
               <td className="text-right">{md.pregame ? '–' : fmtShort1k(r.stock)}</td>
               <td className={cx('text-right', r.coverDays !== null && r.coverDays < s.config.md61.leadTimeMax && 'text-red-300')}>{md.pregame ? '–' : d1(r.coverDays)}</td>
@@ -85,7 +85,7 @@ export function Md61Table({ s }: { s: StateResponse }) {
               </td>
               <td className="pl-3 text-base text-mute">{r.lots.length ? r.lots.map((l) => `${fmtNum(l / 1000)}k`).join(' + ') : '—'}</td>
               <td className="text-right">
-                <button onClick={() => open({ title: `MD61 ${r.sku}`, body: <Md61Why r={r} s={s} /> })} className="h-7 w-7 rounded-full border border-line text-xs font-bold text-mute hover:border-accent hover:text-accent" title="Proč?">
+                <button onClick={() => open({ title: `MD61 ${r.mat}`, body: <Md61Why r={r} s={s} /> })} className="h-7 w-7 rounded-full border border-line text-xs font-bold text-mute hover:border-accent hover:text-accent" title="Proč?">
                   ?
                 </button>
               </td>
@@ -170,8 +170,8 @@ export function Vk32Table({ s }: { s: StateResponse }) {
         <tbody>
           {vk.rows.map((r) => (
             <tr key={r.sku} className="border-t border-line/60">
-              <td className="py-1.5 font-bold" title={r.label}>
-                {r.sku}
+              <td className="py-1.5" title={r.label}>
+                <CopyValue value={r.mat} className="font-bold" />
               </td>
               {vk.dcs.map((dc) => {
                 const c = r.cells.find((x) => x.dc === dc);
@@ -180,7 +180,7 @@ export function Vk32Table({ s }: { s: StateResponse }) {
                   <td key={dc} className="text-right">
                     <span className="inline-flex items-center gap-1">
                       <CopyValue value={sapValue(c.recommended)} display={fmtNum(c.recommended, 2)} className={cx('text-lg', c.action === 'zvýšit' && 'border-good/50', c.action === 'snížit' && 'border-high/50', c.warnFixed && 'text-amber-200')} />
-                      <button onClick={() => open({ title: `VK32 ${r.sku} · DC ${dc}`, body: <Vk32Why r={r} c={c} /> })} className="w-5 text-left font-bold text-mute hover:text-accent" title="Proč?">
+                      <button onClick={() => open({ title: `VK32 ${r.mat} · DC ${dc}`, body: <Vk32Why r={r} c={c} /> })} className="w-5 text-left font-bold text-mute hover:text-accent" title="Proč?">
                         {ARROW[c.action] || '?'}
                       </button>
                     </span>
