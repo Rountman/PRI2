@@ -9,7 +9,8 @@ Nejlepší poměr cena/výkon v tlaku soutěže: **nahraj max 3 xlsx → appka �
 ## 1. Soutěž a herní verze [JISTÉ – prezentace BIZ SIM CUP 2026]
 - Workshop = Manufacturing **Introduction**. **Školní kolo soutěže = Manufacturing Extended.**
 - **Výchozí preset appky = `extended`.** Preset `intro` existuje jen kvůli testům nad `fixtures/` (cvičná data jsou z Intro).
-- Vyhrává nejvyšší Company Valuation na konci hry. Kolo = 20 dní, týden = 5 dní.
+- Vyhrává nejvyšší Company Valuation na konci hry. **5 kol** × 20 dní, týden = 5 dní.
+- Jsme **tým GG** → materiály v SAPu `GG-F01` … `GG-F16` (prefix v Nastavení `teamCode`, prázdné = zjistí se z dat).
 - Role týmu podle prezentace: (1) ceny pro DC10/12/14, (2) plán surovin (MD61 → MD01 → ME59N), (3) marketing, (4) plánování výroby (CO41). Investice: setup, kapacita, splátka úvěru (vše ZFB50).
 
 ## 2. Parametry presetu `extended` [JISTÉ – z dokumentů, v `config/presets.ts`]
@@ -23,11 +24,11 @@ Nejlepší poměr cena/výkon v tlaku soutěže: **nahraj max 3 xlsx → appka �
 | Úrok | z ZCK11 příkladu ≈ €2 644,80/den při €8M. Úrok závisí na ratingu a prime rate (může se změnit). Účtuje se týdně |
 | Sklad | FG 250 000 krabic (+€500/den za 50k), suroviny 250 000 kg (+€1 000/den za 50k), obaly 750 000 ks (+€100/den za 50k) |
 | Dodavatelé | V01, V02. Lead time 1–5 dní, splatnost 20 dní. **Ceny surovin se mění každých 5 dní** |
-| Trh / tým / týden | DC10 Hypermarkety €90k (jen 1 kg, cena velmi citlivá, reklama málo), DC12 Grocery €360k (obě balení, cena citlivá, reklama středně), DC14 Independent €135k (jen 500 g, cena středně, reklama hodně). Celkem ≈ €585k/týden ≈ €117k/den |
+| Trh / tým / týden [JISTÉ – job aid Extended] | DC10 Hypermarkety €90k (jen 1 kg, cena velmi citlivá, reklama málo, splatnost 20 dní), DC12 Grocery €220k (obě balení, cena citlivá, reklama středně, 10–20 dní), DC14 Independent €130k (jen 500 g, cena středně, reklama hodně, 1–20 dní). Celkem ≈ €440k/týden ≈ €88k/den ≈ 14k ks/den → úzké hrdlo je spíš prodej než kapacita |
 | Recepty (minima) | ≥20 % wheat, ≥30 % oat, ≥20 % příchuť (Nut/Blueberry/Strawberry/Raisin), Mixed ≥30 % fruits&nuts (od každého něco), Original bez příchuti. 1 krabice + 1 sáček |
 | Výchozí BOM [JISTÉ – ověřeno na cvičných datech] | 35 % oat / 35 % wheat / 30 % příchuť. 500 g = 0,175/0,175/0,150 kg, 1 kg dvojnásobek |
 | Valuace | `((Profit − Setup)/Kola × 12 + Setup) / (7 % + riziková přirážka)`. Rating z `DebtLoading = Cash + AR − Loan − AP` (tabulka v archivu kap. 2). **Start: −6M → A− → 12,25 %** |
-| Počet kol | **neznámý → nastavitelné, default 4** [OVĚŘIT u organizátora] |
+| Počet kol | **5** [JISTÉ – potvrzeno týmem] |
 
 Pravidla hry: bez zásob se nic neprodá. Preference zákazníků se během hry nemění. Konečný sklad se oceňuje v nákladech → **nikdy neprodávat pod nákladem**.
 
@@ -48,22 +49,24 @@ Pravidla hry: bez zásob se nic neprodá. Preference zákazníků se během hry 
 | 3 | **PriceMarket (ZMARKET)** | trh všech týmů po 5 dnech → kotva ceny + **odhalení preferencí** | jednou za 5 herních dní |
 
 - SummarySales (ZVC2) se nepotřebuje, ZVA05 je nadmnožina. Když ho někdo nahraje, appka ho akceptuje a nekřičí.
-- **Jeden drop zone nahoře** pro všechny soubory najednou, autodetekce podle hlaviček (signatury v archivu kap. 4.1). Vedle 3 „čipy“ se stářím dat (🟢 < 3 min, 🟠, 🔴, ⚪ nenahráno).
+- **Jeden drop zone nahoře** pro všechny soubory najednou, autodetekce podle hlaviček (signatury v archivu kap. 4.1). Vedle 3 „čipy“ se stářím dat (🟢 < 6 min, 🟠 < 15 min, 🔴, ⚪ nenahráno).
+- **Názvy souborů jsou jedno** (např. `export (3).xlsx`), report se pozná podle hlaviček (test v `apps/server/test`).
+- **Rytmus nahrávání: jednou za 5 herních dní** (den 4–5, 9–10, 14–15, 19–20) všechny 3 najednou = zároveň další MRP cyklus.
 - Bez dat appka **nesmí** tvrdit nesmysly typu „DC 12: 0 prodejů“. Analýzy bez vstupu se nezobrazují vůbec, ne jako chyba.
 
 ### Rozšířené vstupy (pod tlačítkem „Rozšířené“)
 ProcSourcing (ZME13: ceny surovin, mění se po 5 dnech), PurchaseOrderTracking (ZME2N), ProductionReport (ZCOOIS), Company-Valuation, ruční finance (cash, AR, AP, loan, net income, 478000).
 
 ## 4. Fáze hry a co appka dělá v každé
-Fáze se určí z dat (max Round/Day v SalesReport). Bez dat = **„Před hrou“**. Jde přepnout i ručně.
+Fáze se určí z dat (max Round/Day v SalesReport). Bez dat = **„Před hrou“**. **Den 20 (kromě posledního kola) = „Mezi koly“ automaticky.** Jde přepnout i ručně.
 
 ### 4.1 Před hrou (žádná data) – musí fungovat z presetu
 Appka zobrazí **startovní checklist** v pořadí (každý bod = akční karta s hodnotami ke zkopírování):
-1. **Sortiment** (editovatelný, default [ODHAD z cvičných dat]): F12 + F13 (1 kg → DC10 + DC12), F02 + F03 (500 g → DC12 + DC14). Proč: v Intro měly nejvyšší ceny i objemy. Pokrývají všechny 3 DC s 4 SKU, tj. málo přestaveb. Po prvním ZMARKET (den 5) appka sortiment přehodnotí.
+1. **Sortiment – „plošně a po 1. kole rozseknout“**: 1. kolo všech 8 příchutí kromě Original/Mixed (F01–F04, F11–F14), abychom poznali preference trhu. Po 1. kole (`assortmentReview`) appka seřadí pool podle tržeb celého trhu (ZMARKET) × naší marže a nechá `assortmentTarget` = 5 (vždy ≥ 1× 1 kg a ≥ 1× 500 g). Vyřazené dostanou MD61 = 0 a doprodají se; karta „Sortiment od kola 2“ v fázi Mezi koly. Vypínač `assortmentAuto` v Nastavení.
 2. **ZCS02 recept**: default ponechat (35/35/30). V Rozšířeném je kalkulačka levnějšího receptu s varováním „může snížit poptávku“. Rozhodnout TEĎ, protože po výrobě už to nejde.
 3. **VK32 startovní ceny** per SKU × DC [ODHAD, editovatelné]: 500 g ≈ €5,20, 1 kg ≈ €7,50. DC10 −€0,30 (velmi cenově citlivé), DC14 +€0,30. Ceny jen tam, kde se balení prodává (DC10 jen 1 kg, DC14 jen 500 g).
 4. **ZFB50 setup reduction** (doporučení s výpočtem, viz 5.4). Default návrh 125k → 6 h [ODHAD].
-5. **MD61 prognóza – 1. cyklus**: každý SKU 48 000 (= 1 max lot) → 192k ks ≈ 8 dní výroby + 4 setupy. Ověřit limity: suroviny 144 000 kg (< 250k), obaly 384k (< 750k), náklad na suroviny ≈ €336k (< cash).
+5. **MD61 prognóza – 1. cyklus**: 1 kg po 24 000, 500 g po 16 000 (8 SKU) → 160k ks + 8 setupů = 224k / 240k ks kapacity za 10 dní. Limity: suroviny 128 000 kg (< 250k), obaly 320k (< 750k), náklad < cash.
 6. **MD01 → ME59N** (Fixed Vendor prázdné) → čekat na dodávku → **CO41**.
 7. Připomínka: **2. MRP cyklus spustit nejpozději den 4–5**, aby suroviny dorazily dřív, než doběhne 1. cyklus (lead time až 5 dní).
 
@@ -107,7 +110,8 @@ SKU vyprodaný · do konce výroby < lead time a není nový MRP cyklus · cena 
 └───────────────────────────────────────────────────────────┴───────────────────────────────────────────────────────────┘
 ```
 - Tabulky MD61 a VK32 jsou **přesně ve tvaru, v jakém se zadávají do SAPu** (stejné pořadí materiálů jako v SAP formuláři). U každé hodnoty je kopírování kliknutím.
-- (?) u každé karty i řádku → **boční panel**: 1 věta proč, čísla, ze kterých to vyplynulo, pravidlo, riziko, jistota (jisté / pravděpodobné / odhad).
+- **Appka rozhoduje sama** – karty jsou jen příkazy s hodnotami (žádné „zvaž / rozhodni“). Důvody nejsou pod nadpisem karty, ale pod (?).
+- (?) u každé karty i řádku: **hover = krátký důvod** (1 věta + klíčová čísla), **klik → boční panel**: proč, čísla, pravidlo, riziko, jistota (jisté / pravděpodobné / odhad).
 - [✓] odškrtnutí se sdílí přes SSE. Odškrtnutá karta zešedne.
 - **„Rozšířené ▸“** = šuplík/drawer zprava, záložky: Další importy · Investice (what-if) · Recept (BOM kalkulačka) · Marketing (ZADS) · Strategie (text) · Nastavení (preset, parametry, počet kol, sortiment, PIN).
 - Velké fonty, tmavý režim, čeština. Žádné modály. Nic se nepočítá na serveru déle než 200 ms.
