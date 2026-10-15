@@ -32,7 +32,7 @@ export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): Act
       ],
       copyValues: mats.map((s) => ({ label: 'Materiál', value: s })),
       why: {
-        summary: 'V cvičné hře měly tyto SKU nejvyšší ceny i objemy. 4 SKU pokryjí všechny 3 DC s málo přestavbami.',
+        summary: `Nejvyšší tržby na trhu v cvičné hře. ${skus.length} výrobků pokryje všechny 3 DC; každý další = 1 přestavba (${sh(m.setupHours)} h) na cyklus.`,
         data: [
           { label: '1 kg', value: 'DC 10 (jen 1 kg) + DC 12' },
           { label: '500 g', value: 'DC 12 + DC 14 (jen 500 g)' },
@@ -105,7 +105,7 @@ export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): Act
       id: 'start:5-md61',
       kind: 'checklist',
       priority: 'kritické',
-      title: `5. MD61 prognóza 1. cyklu: ${mats.map((s) => `${s} = ${fmtNum(cfg.md61.firstCycleQty)}`).join(', ')}`,
+      title: `5. MD61 prognóza 1. cyklu: ${md61.rows.map((r) => `${r.mat} = ${fmtNum(r.forecast)}`).join(', ')}`,
       tcode: 'MD61',
       steps: [
         ...md61.rows.map((r) => `${r.mat}: ${fmtNum(r.forecast)} (→ planned ${r.lots.map((l) => fmtNum(l)).join(' + ')})`),

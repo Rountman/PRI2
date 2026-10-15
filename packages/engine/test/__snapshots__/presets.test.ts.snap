@@ -10,6 +10,7 @@ exports[`preset extended (CLAUDE.md kap. 2) > snapshot 1`] = `
   "assortment": [
     "F02",
     "F03",
+    "F11",
     "F12",
     "F13",
   ],
@@ -86,7 +87,10 @@ exports[`preset extended (CLAUDE.md kap. 2) > snapshot 1`] = `
   "md61": {
     "changeoversPerRound": 10,
     "demandWindow": 5,
-    "firstCycleQty": 48000,
+    "firstCycleQty": {
+      "1kg": 48000,
+      "500g": 24000,
+    },
     "leadTimeMax": 5,
     "mode": "celková",
     "nextMrpDays": 5,

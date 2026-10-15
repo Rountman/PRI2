@@ -51,7 +51,7 @@ export type GameConfig = {
   startPrices: { '500g': number; '1kg': number; dcAdjust: Record<string, number>; overrides: Record<string, number> }; // overrides key "F12:12"
   setupProposal: number; // € proposed before round 1 [ODHAD]
   md61: {
-    firstCycleQty: number; // per SKU before round 1
+    firstCycleQty: Record<Size, number>; // per SKU before round 1, by pack size
     nextMrpDays: number; // days to the next planned MRP run
     leadTimeMax: number; // supplier lead time max (days)
     stockoutBoost: number; // demand × this when sold out ≥ stockoutBoostDays [ODHAD]

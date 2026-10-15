@@ -34,7 +34,8 @@ const LABELS: Record<string, string> = {
   riskFreeRate: 'Bezriziková sazba (0,07)',
   defaultRating: 'Rating bez financí',
   extraCapacityUtilization: 'What-if: využití extra kapacity (0–1)',
-  'md61.firstCycleQty': 'MD61 1. cyklus / SKU',
+  'md61.firstCycleQty.500g': 'MD61 1. cyklus / SKU 500 g',
+  'md61.firstCycleQty.1kg': 'MD61 1. cyklus / SKU 1 kg',
   'md61.nextMrpDays': 'MD61 dny do dalšího MRP',
   'md61.leadTimeMax': 'Lead time surovin max (dny)',
   'md61.stockoutBoost': 'Boost poptávky po výprodeji [ODHAD]',
@@ -56,7 +57,7 @@ const LABELS: Record<string, string> = {
   'dataAgeSec.green': 'Čip 🟢 do (s)',
   'dataAgeSec.orange': 'Čip 🟠 do (s)',
 };
-const GROUPS = ['initial', 'setup', 'fixedCosts', 'md61', 'pricing', 'reserve', 'dataAgeSec', 'storage', 'storageExtraPerDay'];
+const GROUPS = ['initial', 'setup', 'fixedCosts', 'md61', 'md61.firstCycleQty', 'pricing', 'reserve', 'dataAgeSec', 'storage', 'storageExtraPerDay'];
 const SKIP = ['preset', 'assortment', 'startPrices'];
 
 type Field = { path: string; value: unknown };

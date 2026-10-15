@@ -45,20 +45,22 @@ describe('Před hrou (no data)', () => {
     expect(text).not.toMatch(/0 prodejů|bez prodejů|Nahraj [A-Z]/);
   });
 
-  it('MD61 first cycle: 4 × 48 000, materials within limits', () => {
+  it('MD61 first cycle: 1 kg × 48 000, 500 g × 24 000, fits storage, cash and capacity', () => {
     expect(s.md61.rows.map((r) => [r.sku, r.forecast, r.lots])).toEqual([
-      ['F02', 48_000, [48_000]],
-      ['F03', 48_000, [48_000]],
+      ['F02', 24_000, [24_000]],
+      ['F03', 24_000, [24_000]],
+      ['F11', 48_000, [48_000]],
       ['F12', 48_000, [48_000]],
       ['F13', 48_000, [48_000]],
     ]);
-    expect(s.md61.materials.rawKg).toBe(144_000);
+    expect(s.md61.materials.rawKg).toBe(168_000);
     expect(s.md61.materials.packaging).toBe(384_000);
     expect(s.md61.materials.cost).toBeGreaterThan(250_000);
     expect(s.md61.materials.cost).toBeLessThan(400_000);
     expect(s.md61.materials.ok).toBe(true);
     expect(s.md61.capacity.units / s.md61.capacity.perDay).toBe(8);
-    expect(s.md61.capacity.setups).toBe(4);
+    expect(s.md61.capacity.setups).toBe(5);
+    expect(s.md61.capacity.used).toBeLessThanOrEqual(s.md61.capacity.available);
   });
 
   it('VK32 start prices only where the pack may be sold', () => {
@@ -82,9 +84,9 @@ describe('Před hrou (no data)', () => {
 describe('team code (SAP material GG-F01)', () => {
   it('preset GG → all SAP texts use GG-Fxx', () => {
     const s = buildSnapshot(emptyDataset(), ext);
-    expect(s.md61.rows.map((r) => r.mat)).toEqual(['GG-F02', 'GG-F03', 'GG-F12', 'GG-F13']);
-    expect(s.cards[0].title).toBe('1. Sortiment: GG-F02, GG-F03, GG-F12, GG-F13');
-    expect(s.cards.find((c) => c.id === 'start:5-md61')!.copyValues![0]).toEqual({ label: 'GG-F02', value: '48000' });
+    expect(s.md61.rows.map((r) => r.mat)).toEqual(['GG-F02', 'GG-F03', 'GG-F11', 'GG-F12', 'GG-F13']);
+    expect(s.cards[0].title).toBe('1. Sortiment: GG-F02, GG-F03, GG-F11, GG-F12, GG-F13');
+    expect(s.cards.find((c) => c.id === 'start:5-md61')!.copyValues![0]).toEqual({ label: 'GG-F02', value: '24000' });
     expect(s.vk32.rows[0].mat).toBe('GG-F02');
   });
 
@@ -118,8 +120,8 @@ describe('demand (5.1)', () => {
   it('no history → preset (team market / start price)', () => {
     const d = dailyDemand(emptyDataset(), ext, 0, analyze(emptyDataset(), ext).stockPath, 'F12');
     expect(d.source).toBe('preset');
-    expect(d.byDc['10']).toBeCloseTo(90_000 / 5 / 2 / 7.2, 6);
-    expect(d.byDc['12']).toBeCloseTo(220_000 / 5 / 4 / 7.5, 6);
+    expect(d.byDc['10']).toBeCloseTo(90_000 / 5 / 3 / 7.2, 6); // 3 × 1 kg in DC 10
+    expect(d.byDc['12']).toBeCloseTo(220_000 / 5 / 5 / 7.5, 6); // all 5 in DC 12
   });
 });
 

@@ -51,11 +51,11 @@ const EXTENDED: GameConfig = {
   defaultRating: 'A−', // start: 2M − 8M = −6M → A− → 12,25 %
   extraCapacityUtilization: 0.5,
 
-  assortment: ['F02', 'F03', 'F12', 'F13'], // [ODHAD z cvičných dat]
+  assortment: ['F02', 'F03', 'F11', 'F12', 'F13'], // top 5 by market revenue in practice data (F11 = cheap nuts) [ODHAD]
   startPrices: { '500g': 5.2, '1kg': 7.5, dcAdjust: { '10': -0.3, '12': 0, '14': 0.3 }, overrides: {} }, // [ODHAD]
   setupProposal: 125_000, // [ODHAD]
   md61: {
-    firstCycleQty: 48_000,
+    firstCycleQty: { '500g': 24_000, '1kg': 48_000 }, // 1 kg sells best and has the higher margin
     nextMrpDays: 5,
     leadTimeMax: 5,
     stockoutBoost: 1.2,

@@ -6,7 +6,7 @@ import { Badge, CopyValue, cx, Info, Panel, useSidePanel, Why } from './ui.tsx';
 const d1 = (x: number | null) => (x === null ? '∞' : fmtNum(x, 1));
 
 function md61Reason(r: Md61Row, horizon: number, pregame: boolean): string {
-  if (pregame) return 'Start: prázdný sklad → 1 maximální dávka.';
+  if (pregame) return 'Start: prázdný sklad → 1 kg plná dávka, 500 g poloviční (nižší marže).';
   if (r.cut && r.planned === 0) return 'Kapacita plná – nejnižší marže/ks, teď se nevyrábí.';
   if (r.planned === 0) return `Sklad + výroba pokryjí ${horizon} dní – nic nevyrábět.`;
   return `Poptávka × ${horizon} dní − sklad − výroba${r.cut ? ' (kráceno kapacitou)' : ''}.`;
@@ -19,7 +19,7 @@ function Md61Why({ r, s }: { r: Md61Row; s: StateResponse }) {
     <div className="space-y-3">
       <p className="text-lg">
         {md.pregame
-          ? `Start: sklad je prázdný, 1. cyklus = 1 maximální dávka (${fmtNum(cfg.md61.firstCycleQty)}).`
+          ? `Start: sklad je prázdný, 1. cyklus = ${fmtNum(r.forecast)} ks (1 kg: ${fmtNum(cfg.md61.firstCycleQty['1kg'])}, 500 g: ${fmtNum(cfg.md61.firstCycleQty['500g'])}).`
           : `Prognóza = poptávka × ${md.horizon} dní (dny do dalšího MRP ${cfg.md61.nextMrpDays} + lead time ${cfg.md61.leadTimeMax}), zaokrouhleno nahoru na 1 000.`}
       </p>
       <table className="num w-full text-sm">

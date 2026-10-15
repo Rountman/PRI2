@@ -15,11 +15,11 @@ const SECTIONS: { title: string; items: string[] }[] = [
   {
     title: 'Před hrou',
     items: [
-      'Sortiment (default F02, F03, F12, F13) – pokryje DC 10/12/14 se 4 SKU.',
+      'Sortiment (default F02, F03, F11, F12, F13) – top 5 podle tržeb trhu, pokryje DC 10/12/14.',
       'ZCS02 recept nech 35 / 35 / 30 – po první výrobě je zamčený.',
       'VK32 startovní ceny jen tam, kde se balení smí prodávat.',
       'ZFB50 setup reduction podle marginální tabulky (návratnost > 2×).',
-      'MD61 1. cyklus = 1 max dávka / SKU → MD01 → ME59N (Fixed Vendor prázdné) → CO41.',
+      'MD61 1. cyklus: 1 kg po 48 000, 500 g po 24 000 → MD01 → ME59N (Fixed Vendor prázdné) → CO41.',
       '2. MRP cyklus nejpozději den 4–5 (lead time až 5 dní).',
     ],
   },

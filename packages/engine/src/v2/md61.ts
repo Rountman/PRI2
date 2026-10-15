@@ -1,6 +1,6 @@
 // 5.2 MD61 forecast recommendation (main output of the app).
 import { unitCostFromBom } from '../bom.ts';
-import { skuKg, skuLabel } from '../normalize.ts';
+import { skuKg, skuLabel, skuSize } from '../normalize.ts';
 import { cutLots, roundDown, roundUp } from './lotsize.ts';
 import type { Demand, Model } from './model.ts';
 
@@ -43,7 +43,7 @@ export function md61Plan(m: Model): Md61Plan {
     const wip = m.wip[sku] ?? 0;
     const d = m.demand[sku];
     let forecast: number;
-    if (m.pregame) forecast = cfg.md61.firstCycleQty;
+    if (m.pregame) forecast = cfg.md61.firstCycleQty[skuSize(sku)];
     else if (cfg.md61.mode === 'doplnění') forecast = roundUp(Math.max(0, d.perDay * horizon - stock - wip), 1000);
     else forecast = roundUp(d.perDay * horizon, 1000);
     const lots = lotsFor(m, forecast, stock, wip);
