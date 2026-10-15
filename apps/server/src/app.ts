@@ -12,6 +12,7 @@ import {
   parseReport,
   REPORT_KINDS,
   SPECS,
+  type ClockOverride,
   type FinanceSnapshot,
   type MappingProfile,
   type ReportKind,
@@ -38,7 +39,7 @@ export function createApp(store: Store, opts: AppOptions = {}) {
   const snapshot = (): Snapshot => {
     if (!cache || cache.version !== version) {
       const cfg = store.config();
-      cache = { version, snap: buildSnapshot(store.dataset(), cfg, { clock: store.clock(), howto: store.howto(), done: store.done() }) };
+      cache = { version, snap: buildSnapshot(store.dataset(), cfg, { clock: store.clock(), done: store.done() }) };
     }
     return cache.snap;
   };
@@ -74,7 +75,6 @@ export function createApp(store: Store, opts: AppOptions = {}) {
       configOverride: store.configOverride(),
       presets: Object.keys(PRESETS),
       clock: store.clock(),
-      howto: store.howto(),
       inventoryGameDay: store.getSetting<number | null>('inventoryGameDay', null),
       finance: store.finance(),
       reports: REPORT_KINDS.map((k) => ({ kind: k, label: SPECS[k].label, fiori: SPECS[k].fiori, columns: SPECS[k].columns })),
@@ -166,14 +166,10 @@ export function createApp(store: Store, opts: AppOptions = {}) {
     changed();
     return c.json({ ok: true, config: store.config() });
   });
-  app.put('/api/howto', async (c) => {
-    store.setSetting('howto', await c.req.json());
-    changed();
-    return c.json({ ok: true });
-  });
   app.put('/api/clock', async (c) => {
-    const ov = await c.req.json<{ gameDay?: number | null; betweenRounds?: boolean }>();
-    store.setSetting('clock', { gameDay: ov.gameDay || null, betweenRounds: !!ov.betweenRounds });
+    const ov = await c.req.json<ClockOverride>();
+    const phase = ov.phase && ['pred-hrou', 'kolo', 'mezi-koly'].includes(ov.phase) ? ov.phase : null;
+    store.setSetting('clock', { gameDay: ov.gameDay || null, betweenRounds: !!ov.betweenRounds, phase });
     changed();
     return c.json({ ok: true });
   });

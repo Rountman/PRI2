@@ -1,194 +1,108 @@
-// Game parameters. Defaults only — every value can be overridden in UI (Nastavení hry), stored in SQLite.
-// Anything marked [OVĚŘIT] is listed in docs/assumptions.md.
+// Game parameter types + pure helpers. Values live in presets.ts; every value can be overridden
+// in UI (Rozšířené → Nastavení), stored in SQLite.
 
 export type PresetName = 'intro' | 'extended';
 export type Area = 'N' | 'S' | 'W';
 export type RawKey = 'R01' | 'R02' | 'R03' | 'R04' | 'R05' | 'R06';
 export type PackKey = 'P01' | 'P02' | 'P03' | 'P04';
 export type Recipe = Partial<Record<RawKey, number>>; // share of product mass, sums to 1
+export type Size = '500g' | '1kg';
 
 export type RatingRow = { threshold: number; rating: string; premium: number }; // premium in % points
+
+export type Sensitivity = 'nízká' | 'střední' | 'vysoká' | 'velmi vysoká';
 
 export type ChannelConfig = {
   dc: string;
   name: string;
-  sizes: ('500g' | '1kg')[];
-  marketPer5DaysPerTeam: number; // € – briefing estimate
-  marketingSensitivity: 'nízká' | 'střední' | 'vysoká';
+  sizes: Size[];
+  marketPer5DaysPerTeam: number; // € – briefing
+  priceSensitivity: Sensitivity;
+  marketingSensitivity: Sensitivity;
 };
+
+/** Fixed costs charged every `periodDays` days (Extended briefing: €126 250 / 5 days). */
+export type FixedCosts = { periodDays: number; labor: number; overhead: number; sga: number; depBuilding: number; depMachines: number };
 
 export type GameConfig = {
   preset: PresetName;
+  teamCode: string; // SAP material prefix, e.g. 'GG' → GG-F01 (empty = detect from data)
   roundLength: number;
   rounds: number; // [OVĚŘIT] total rounds in the competition
-  initial: { cash: number; loan: number; finishedGoodsPerSku: number };
-  capacityPerDay: number; // units/day [OVĚŘIT] intro machines €16M may mean 16k/day
-  capacityInUnits: boolean; // [OVĚŘIT] capacity counts boxes regardless of size
-  capacityCostPer1000: number;
+  initial: { cash: number; loan: number; machines: number; finishedGoodsPerSku: number };
+  capacityPerDay: number; // units/day = account 11000 / 1000
+  capacityInUnits: boolean; // capacity counts boxes regardless of size
+  capacityCostPer1000: number; // € per +1 000 units/day
   setup: { minHours: number; varHours: number; k: number; spend: number };
+  setupSteps: number[]; // cumulative 478000 balances for the marginal table
   lotMin: number;
   lotMax: number;
-  fixedCostPerDay: number;
-  depreciationPerDayPerM: number;
-  interestPerDayPerM: number;
+  lotRounding: number;
+  fixedCosts: FixedCosts;
+  depreciationPerDayPerM: number; // machines: €50 000 / 5 days per €24M ≈ €417/day per €1M
+  interestPerDayPerM: number; // ZCK11 example: €2 644,80/day at €8M
   riskFreeRate: number; // 0.07
-  cashReserve: number; // R13: keep at least this much cash (ZFF7B liquidity) [OVĚŘIT]
-  extraCapacityUtilization: number; // what-if: share of added capacity that will actually sell (0..1)
   ratingTable: RatingRow[];
   defaultRating: string; // used when no finance snapshot exists
-  pricing: {
-    step: number; // € per price change
-    lowCoverageDays: number; // R6
-    highCoverageDays: number; // R7
-    clearanceCoverageDays: number; // R12
-    maxAboveMarketPct: number; // R6: raise only if our price ≤ market × (1+x)
-    includeFixedInFloor: boolean;
+  extraCapacityUtilization: number; // what-if: share of added capacity that will actually sell (0..1)
+
+  // ---- v2 decision parameters ----
+  assortment: string[]; // SKUs we produce in round 1 (from round 2 the review below decides when assortmentAuto)
+  assortmentPool: string[]; // candidates for the review after round 1
+  assortmentTarget: number; // how many SKUs to keep after round 1
+  assortmentAuto: boolean; // true = from round 2 MD61 follows the review, not `assortment`
+  startPrices: { '500g': number; '1kg': number; dcAdjust: Record<string, number>; overrides: Record<string, number> }; // overrides key "F12:12"
+  setupProposal: number; // € proposed before round 1 [ODHAD]
+  md61: {
+    firstCycleQty: Record<Size, number>; // per SKU before round 1, by pack size
+    nextMrpDays: number; // days to the next planned MRP run
+    leadTimeMax: number; // supplier lead time max (days)
+    stockoutBoost: number; // demand × this when sold out ≥ stockoutBoostDays [ODHAD]
+    stockoutBoostDays: number;
+    demandWindow: number; // days for the demand average
+    mode: 'celková' | 'doplnění'; // [OVĚŘIT] how MD61 forecast is consumed
+    changeoversPerRound: number; // default for setup what-if without production data
   };
-  coverageWindowDays: number;
-  leadTimeDaysMax: number;
-  purchaseHorizonDays: number; // R4b
-  rawOrderRoundingKg: number;
-  idleThresholdDays: number; // R9
-  maxChangeoversPerRound: number; // R1
-  sortimentSize: number; // R2
-  marketingEurPerRegionDay: number; // R10 suggestion
-  marketingDcs: string[];
+  pricing: { step: number; lowCoverDays: number; highCoverDays: number; anchorFloorPct: number; warnFixedPerUnit: boolean };
+  reserve: { fixedDays: number; buffer: number }; // cash reserve for loan repayment
+  investPayback: number; // recommend investment when return > x × spend
+  maxCards: number;
+  maxCritical: number;
+
+  marketingEurPerRegionDay: number;
   channels: ChannelConfig[];
   areas: Area[];
   recipes: Record<string, Recipe>; // by flavor digit '1'..'6' – current BOM
   recipeMin: { oats: number; wheat: number; flavor: number; mixedFruitNuts: number; mixedEachMin: number };
-  recipeAffectsDemand: boolean; // [OVĚŘIT]
   rawPrices: Record<RawKey | PackKey, number>; // fallback when ProcSourcing missing
   storage: { finishedGoods: number; raw: number; packaging: number };
+  storageExtraPerDay: { finishedGoods: number; raw: number; packaging: number }; // € per day per +50k
   valuationChartSkipDays: number;
-  calibrationTolerance: number; // 5 % → banner
-  financeMatchTolerance: number; // 0.5 % → ✅
+  calibrationTolerance: number;
+  financeMatchTolerance: number;
   dataAgeSec: { green: number; orange: number };
   ignoreVendors: string[]; // V03 = initial stock purchase in Intro
 };
 
-export const RATING_TABLE: RatingRow[] = [
-  { threshold: 0, rating: 'AAA+', premium: 3.0 },
-  { threshold: -1e6, rating: 'AA+', premium: 3.75 },
-  { threshold: -2e6, rating: 'AA', premium: 4.0 },
-  { threshold: -3e6, rating: 'AA−', premium: 4.25 },
-  { threshold: -4e6, rating: 'A+', premium: 4.75 },
-  { threshold: -5e6, rating: 'A', premium: 5.0 },
-  { threshold: -6e6, rating: 'A−', premium: 5.25 },
-  { threshold: -7e6, rating: 'BBB+', premium: 5.75 },
-  { threshold: -8e6, rating: 'BBB', premium: 6.0 },
-  { threshold: -9e6, rating: 'BBB−', premium: 6.25 },
-  { threshold: -10e6, rating: 'BB+', premium: 6.75 },
-  { threshold: -11e6, rating: 'BB', premium: 7.0 },
-  { threshold: -12e6, rating: 'BB−', premium: 7.25 },
-  { threshold: -13e6, rating: 'B+', premium: 7.75 },
-  { threshold: -14e6, rating: 'B', premium: 8.0 },
-  { threshold: -15e6, rating: 'B−', premium: 8.25 },
-  { threshold: -16e6, rating: 'CCC+', premium: 9.0 },
-  { threshold: -17e6, rating: 'CCC', premium: 10.0 },
-  { threshold: -18e6, rating: 'CCC−', premium: 11.0 },
-  { threshold: -19e6, rating: 'CC', premium: 12.0 },
-  { threshold: -20e6, rating: 'C', premium: 15.0 },
-];
-
-// Current recipes: 35 % oats (R06), 35 % wheat (R05), 30 % flavor. Verified against Unit Cost for F01–F04, F11–F14.
-const STD = (flavor: RawKey): Recipe => ({ R06: 0.35, R05: 0.35, [flavor]: 0.3 });
-
-const BASE: Omit<GameConfig, 'preset'> = {
-  roundLength: 20,
-  rounds: 4,
-  initial: { cash: 2_000_000, loan: 8_000_000, finishedGoodsPerSku: 0 },
-  capacityPerDay: 24_000,
-  capacityInUnits: true,
-  capacityCostPer1000: 1_000_000,
-  setup: { minHours: 2, varHours: 6, k: 250_000, spend: 0 },
-  lotMin: 16_000,
-  lotMax: 48_000,
-  fixedCostPerDay: 27_894.8,
-  depreciationPerDayPerM: 10_000 / 24,
-  interestPerDayPerM: 2_644.8 / 8,
-  riskFreeRate: 0.07,
-  cashReserve: 500_000,
-  extraCapacityUtilization: 0.5,
-  ratingTable: RATING_TABLE,
-  defaultRating: 'A−',
-  pricing: {
-    step: 0.3,
-    lowCoverageDays: 3,
-    highCoverageDays: 10,
-    clearanceCoverageDays: 5,
-    maxAboveMarketPct: 10,
-    includeFixedInFloor: false,
-  },
-  coverageWindowDays: 5,
-  leadTimeDaysMax: 5,
-  purchaseHorizonDays: 5,
-  rawOrderRoundingKg: 100,
-  idleThresholdDays: 0.5,
-  maxChangeoversPerRound: 6,
-  sortimentSize: 5,
-  marketingEurPerRegionDay: 1_000,
-  marketingDcs: ['14'],
-  channels: [
-    { dc: '10', name: 'Hypermarkety', sizes: ['1kg'], marketPer5DaysPerTeam: 90_000, marketingSensitivity: 'nízká' },
-    { dc: '12', name: 'Grocery chains', sizes: ['500g', '1kg'], marketPer5DaysPerTeam: 360_000, marketingSensitivity: 'střední' },
-    { dc: '14', name: 'Independent grocers', sizes: ['500g'], marketPer5DaysPerTeam: 135_000, marketingSensitivity: 'vysoká' },
-  ],
-  areas: ['N', 'S', 'W'],
-  recipes: {
-    '1': STD('R01'),
-    '2': STD('R02'),
-    '3': STD('R03'),
-    '4': STD('R04'),
-    '5': { R06: 0.5, R05: 0.5 }, // Original [OVĚŘIT] – not produced in fixtures
-    '6': { R06: 0.35, R05: 0.35, R01: 0.075, R02: 0.075, R03: 0.075, R04: 0.075 }, // Mixed [OVĚŘIT]
-  },
-  recipeMin: { oats: 0.3, wheat: 0.2, flavor: 0.2, mixedFruitNuts: 0.3, mixedEachMin: 0.01 },
-  recipeAffectsDemand: false,
-  rawPrices: { R01: 1.82, R02: 4.0, R03: 4.02, R04: 1.07, R05: 0.99, R06: 0.92, P01: 0.28, P02: 0.12, P03: 0.21, P04: 0.09 },
-  storage: { finishedGoods: 250_000, raw: 250_000, packaging: 750_000 },
-  valuationChartSkipDays: 2,
-  calibrationTolerance: 0.05,
-  financeMatchTolerance: 0.005,
-  dataAgeSec: { green: 120, orange: 600 },
-  ignoreVendors: ['V03'],
-};
-
-export const PRESETS: Record<PresetName, GameConfig> = {
-  // Calibrated on fixtures (Manufacturing Introduction, team GG).
-  intro: {
-    ...BASE,
-    preset: 'intro',
-    initial: { cash: 2_000_000, loan: 0, finishedGoodsPerSku: 30_000 },
-    fixedCostPerDay: 14_600, // derived: gross margin − net income [PRAVDĚP.]
-    defaultRating: 'AAA+',
-  },
-  // From the official Extended briefing.
-  extended: { ...BASE, preset: 'extended' },
-};
-
-export const DEFAULT_PRESET: PresetName = 'intro';
-
-/** Deep-merge a partial override (from UI/SQLite) over a preset. Arrays are replaced, not merged. */
-export function resolveConfig(override: DeepPartial<GameConfig> = {}): GameConfig {
-  const preset = PRESETS[(override.preset as PresetName) ?? DEFAULT_PRESET] ?? PRESETS[DEFAULT_PRESET];
-  return deepMerge(structuredClone(preset), override) as GameConfig;
-}
-
 export type DeepPartial<T> = { [K in keyof T]?: T[K] extends (infer U)[] ? U[] : T[K] extends object ? DeepPartial<T[K]> : T[K] };
-
-function deepMerge(base: any, over: any): any {
-  if (over === undefined || over === null) return base;
-  if (Array.isArray(over) || typeof over !== 'object') return over;
-  const out = { ...base };
-  for (const [k, v] of Object.entries(over)) {
-    out[k] = base && typeof base[k] === 'object' && !Array.isArray(base[k]) ? deepMerge(base[k], v) : v;
-  }
-  return out;
-}
 
 export function setupHours(cfg: GameConfig, spend = cfg.setup.spend): number {
   // SetupTime = 2 + (6 × 250 000) / (250 000 + balance478000); balance 0 → 8 h
   const { minHours, varHours, k } = cfg.setup;
   return minHours + (varHours * k) / (k + Math.max(0, spend));
+}
+
+export function interestPerDay(cfg: GameConfig, loan = cfg.initial.loan): number {
+  return (Math.abs(loan) / 1e6) * cfg.interestPerDayPerM;
+}
+
+/** Fixed costs per day incl. interest on `loan` (Extended: 126 250 / 5 + 2 644,80 = 27 894,80). */
+export function fixedPerDay(cfg: GameConfig, loan = cfg.initial.loan): number {
+  const f = cfg.fixedCosts;
+  return (f.labor + f.overhead + f.sga + f.depBuilding + f.depMachines) / f.periodDays + interestPerDay(cfg, loan);
+}
+
+/** Cash to keep before repaying the loan: fixed costs N days + next cycle raw materials + buffer. */
+export function cashReserve(cfg: GameConfig, rawNextCycle = 0): number {
+  return fixedPerDay(cfg) * cfg.reserve.fixedDays + rawNextCycle + cfg.reserve.buffer;
 }

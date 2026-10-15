@@ -1,46 +1,72 @@
 import type { StateResponse } from '../api.ts';
-import { Badge, Panel } from '../components/ui.tsx';
-import { PHASES } from './Velin.tsx';
+import { Panel } from '../components/ui.tsx';
 
-/** Whole playbook, generated from rule metadata (nothing written twice). */
-export function Strategie({ s }: { s: StateResponse }) {
-  const rules = s.snapshot.rules;
-  const current = s.snapshot.analysis.clock.phase;
-  const active = new Set(s.snapshot.cards.map((c) => c.ruleId));
+const SECTIONS: { title: string; items: string[] }[] = [
+  {
+    title: 'Role v týmu GG',
+    items: [
+      '1 · Suroviny a MRP: MD61 → MD01 → ME59N. Hlídá tabulku MD61 a karty „dojde za X dne“. Nahrává ZMB52.',
+      '2 · Výroba: CO41 po dodání surovin, ZCS02. Hlídá kartu MRP cyklu. Zástup za #1.',
+      '3 · Ceny: VK32 pro DC 10/12/14. Hlídá tabulku VK32. Nahrává ZVA05 + ZMARKET (den 5/10/15/20).',
+      '4 · Kapitán: ZADS, ZFB50, ruční finance, karty investic mezi koly. Zástup za #3.',
+      'Appka rozhoduje – kdo má kartu, naťuká ji a dá ✓. Důvod je pod (?).',
+    ],
+  },
+  {
+    title: 'Před hrou',
+    items: [
+      'Sortiment 1. kola plošně: všech 8 příchutí kromě Original a Mixed. Po 1. kole appka sama nechá 5 nejlepších (tržby trhu × naše marže).',
+      'ZCS02 recept nech 35 / 35 / 30 – po první výrobě je zamčený.',
+      'VK32 startovní ceny jen tam, kde se balení smí prodávat.',
+      'ZFB50 setup reduction podle marginální tabulky (návratnost > 2×).',
+      'MD61 1. cyklus: 1 kg po 24 000, 500 g po 16 000 → MD01 → ME59N (Fixed Vendor prázdné) → CO41.',
+      '2. MRP cyklus nejpozději den 4–5 (lead time až 5 dní).',
+    ],
+  },
+  {
+    title: 'Během kola (každých 5 herních dní)',
+    items: [
+      'Den 4–5, 9–10, 14–15, 19–20: stáhni ZMB52 + ZVA05 + ZMARKET a přetáhni všechny 3 najednou. Názvy souborů jsou jedno – appka pozná report podle obsahu.',
+      'MD61 podle tabulky → MD01 → zkontroluj planned orders → ME59N → CO41.',
+      'VK32: pokrytí < 3 dny → +0,30 €, > 8 dní → −0,30 € (ne pod kotvu trhu −10 %), nikdy pod unit cost.',
+      'Max 5 karet, max 2 kritické – vždy nahoře to s největším dopadem v €.',
+    ],
+  },
+  {
+    title: 'Mezi koly (zapne se samo po 20. dni)',
+    items: ['Splátka úvěru: cash − rezerva (rating se nemění, úrok klesá).', 'Setup / kapacita jen s návratností.', 'Lot size jen přes MM02 se svolením instruktora.'],
+  },
+  {
+    title: 'Pravidla hry',
+    items: [
+      'Bez zásob se nic neprodá. Preference zákazníků se nemění.',
+      'Konečný sklad se oceňuje v nákladech → nikdy neprodávat pod nákladem.',
+      'Zakázky ve frontě nejdou přeřadit ani zrušit. CO41 jen když jsou všechny suroviny skladem.',
+      'Ceny surovin se mění každých 5 dní.',
+    ],
+  },
+  {
+    title: 'Otevřené [OVĚŘIT]',
+    items: [
+      'Jak MD61 spotřebovává prognózu prodeji (přepínač režimu v Nastavení).',
+      'Sortiment, startovní ceny, setup 125k, boost poptávky × 1,2 – odhady.',
+      'Úrok závisí na ratingu a prime rate – může se změnit.',
+    ],
+  },
+];
+
+export function Strategie(_: { s: StateResponse }) {
   return (
     <div className="space-y-4">
-      <Panel title="Jak se vyhrává">
-        <div className="space-y-2 text-lg">
-          <p>
-            Vyhrává nejvyšší <b>Company Valuation</b> = (profit / odehraná kola × 12) ÷ (7 % + riziková přirážka ratingu). Každé euro profitu se násobí zhruba
-            12 / (kola × diskont) – při 4 kolech a 10 % je to <b>×30</b>.
-          </p>
-          <p>
-            Ve cvičné hře byla úzkým hrdlem <b>nabídka</b>: prázdný sklad, stojící linka (chyběly suroviny), 8h přestavby a dva nevyužité kanály (DC 10, DC 14).
-          </p>
-        </div>
-      </Panel>
-      {PHASES.map((p) => {
-        const list = rules.filter((r) => r.phases.includes(p.id));
-        return (
-          <Panel key={p.id} title={<span className={p.id === current ? 'text-accent' : undefined}>{p.id === current ? '● ' : ''}{p.label}</span>}>
-            <div className="grid gap-3 lg:grid-cols-2">
-              {list.map((r) => (
-                <div key={r.id} className="rounded-lg bg-panel2 p-3">
-                  <div className="flex items-center gap-2">
-                    <Badge tone="accent">{r.id}</Badge>
-                    <b className="text-lg">{r.name}</b>
-                    {active.has(r.id) && <Badge tone="high">aktivní karta</Badge>}
-                  </div>
-                  <p className="mt-1">{r.summary}</p>
-                  <p className="mt-1 text-sm text-mute">Proč: {r.why}</p>
-                  <p className="mt-1 text-xs text-mute">Potřebuje: {r.needs.join(', ')}</p>
-                </div>
-              ))}
-            </div>
-          </Panel>
-        );
-      })}
+      {SECTIONS.map((x) => (
+        <Panel key={x.title} title={x.title}>
+          <ul className="list-disc space-y-1 pl-5">
+            {x.items.map((i) => (
+              <li key={i}>{i}</li>
+            ))}
+          </ul>
+        </Panel>
+      ))}
     </div>
   );
 }

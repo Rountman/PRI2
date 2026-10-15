@@ -2,34 +2,25 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, fireEvent, render } from '@testing-library/react';
 import * as XLSX from 'xlsx';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { isKnown, parseReport } from '@copilot/engine';
 import { createApp } from '../../server/src/app.ts';
 import { Store } from '../../server/src/store.ts';
 import type { StateResponse } from '../src/api.ts';
-import { Shell, TABS } from '../src/App.tsx';
+import { DRAWER_TABS, Shell } from '../src/App.tsx';
 
 const FIX = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../fixtures');
 const ALL = fs.readdirSync(FIX).filter((f) => f.endsWith('.xlsx'));
+const BASIC = ['InventoryReport.xlsx', 'SalesReport.xlsx', 'PriceMarket.xlsx'];
 
-beforeAll(() => {
-  // recharts ResponsiveContainer needs ResizeObserver
-  (globalThis as any).ResizeObserver ??= class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-});
-afterEach(() => {
-  cleanup();
-  localStorage.clear();
-});
+afterEach(cleanup);
 
 // jsdom replaces FormData/File globals, so multipart is covered by the server test; here we ingest via the parser.
-async function stateFor(files: { name: string; data: Uint8Array }[]): Promise<StateResponse> {
+async function stateFor(files: { name: string; data: Uint8Array }[], preset?: 'intro' | 'extended'): Promise<StateResponse> {
   const store = new Store();
+  if (preset) store.setSetting('config', { preset });
   const { app } = createApp(store);
   for (const f of files) {
     const r = parseReport(f.data, { roundLength: 20 });
@@ -50,43 +41,75 @@ function renameColumn(name: string, from: string, to: string) {
   return { name, data: new Uint8Array(XLSX.write(out, { type: 'array', bookType: 'xlsx' })) };
 }
 
-function renderAllTabs(s: StateResponse) {
-  for (const t of TABS) {
-    const { container, unmount } = render(<Shell s={s} online lastOk={new Date()} initialTab={t.id} />);
-    expect(container.textContent, `tab ${t.id}`).toContain('ERPsim');
-    expect(container.querySelector('main')!.textContent!.length, `tab ${t.id} main`).toBeGreaterThan(10);
-    unmount();
-    localStorage.clear();
+/** Main screen + every drawer tab renders. */
+function renderAll(s: StateResponse) {
+  const { container, unmount } = render(<Shell s={s} online lastOk={new Date()} />);
+  expect(container.textContent).toContain('ERPsim');
+  expect(container.querySelector('[data-testid=drawer]')).toBeNull();
+  unmount();
+  for (const t of DRAWER_TABS) {
+    const r = render(<Shell s={s} online lastOk={new Date()} initialDrawer={t.id} />);
+    expect(r.container.querySelector('[data-testid=drawer]')!.textContent!.length, `drawer ${t.id}`).toBeGreaterThan(20);
+    r.unmount();
   }
 }
 
-describe('e2e: fixtures → every screen renders', () => {
-  it('all 8 reports', async () => {
-    const s = await stateFor(ALL.map(read));
-    renderAllTabs(s);
-    const { container } = render(<Shell s={s} online={false} lastOk={new Date()} initialTab="velin" />);
-    expect(container.textContent).toContain('offline');
-    expect(container.textContent).toContain('Objednej suroviny HNED');
-    expect(container.textContent).toContain('DC 10');
+describe('e2e: one screen', () => {
+  it('(a) no data → Před hrou, 7 checklist cards, A−, no "0 prodejů", no "Nahraj X"', async () => {
+    const s = await stateFor([]);
+    renderAll(s);
+    const { container, getByTestId } = render(<Shell s={s} online lastOk={new Date()} />);
+    const text = container.textContent!;
+    expect(getByTestId('phase').textContent).toBe('Před hrou');
+    expect(text).toContain('(A−)');
+    expect(getByTestId('cards').children).toHaveLength(7);
+    expect(text).not.toMatch(/0 prodejů|bez prodejů|Nahraj [A-Z]/);
+    expect(getByTestId('chips').textContent).toMatch(/⚪ Sklad.*⚪ Prodeje.*⚪ Trh/);
+    expect(getByTestId('md61').textContent).toMatch(/24\s000/);
+    expect(getByTestId('vk32').textContent).toContain('7,20');
   });
 
-  it('empty server', async () => {
-    renderAllTabs(await stateFor([]));
+  it('(b) 3 basic reports → round cards, MD61 + VK32', async () => {
+    const s = await stateFor(BASIC.map(read), 'intro');
+    renderAll(s);
+    const { container, getByTestId } = render(<Shell s={s} online={false} lastOk={new Date()} />);
+    expect(container.textContent).toContain('offline');
+    expect(getByTestId('phase').textContent).toBe('Mezi koly (po kole 3)');
+    expect(getByTestId('chips').textContent).toMatch(/🟢 Sklad.*🟢 Prodeje.*🟢 Trh/);
+    const n = getByTestId('cards').children.length;
+    expect(n).toBeGreaterThan(0);
+    expect(n).toBeLessThanOrEqual(5);
+    expect(getByTestId('md61').textContent).toContain('F13');
+  });
+
+  it('(c) all 8 reports', async () => {
+    const s = await stateFor(ALL.map(read), 'intro');
+    renderAll(s);
+    const { getByTestId } = render(<Shell s={s} online lastOk={new Date()} />);
+    expect(getByTestId('valuation').textContent).toBe('77,4M');
+  });
+
+  it('opens the drawer from the top bar (no modal)', async () => {
+    const s = await stateFor([]);
+    const { getByTestId, container } = render(<Shell s={s} online lastOk={new Date()} />);
+    fireEvent.click(getByTestId('advanced'));
+    expect(container.querySelector('[data-testid=drawer]')).not.toBeNull();
+    expect(container.querySelector('[role=dialog]')).toBeNull();
   });
 
   it.each(ALL)('without %s', async (skip) => {
-    renderAllTabs(await stateFor(ALL.filter((f) => f !== skip).map(read)));
+    renderAll(await stateFor(ALL.filter((f) => f !== skip).map(read), 'intro'));
   });
 
   it('renamed optional column (SalesReport Cost → Kosten) still imports', async () => {
-    const s = await stateFor([...ALL.filter((f) => f !== 'SalesReport.xlsx').map(read), renameColumn('SalesReport.xlsx', 'Cost', 'Kosten')]);
+    const s = await stateFor([...ALL.filter((f) => f !== 'SalesReport.xlsx').map(read), renameColumn('SalesReport.xlsx', 'Cost', 'Kosten')], 'intro');
     expect(s.imports.sales).toBeDefined();
-    renderAllTabs(s);
+    renderAll(s);
   });
 
   it('renamed required column (Material → Artikel) → report unknown, rest renders', async () => {
-    const s = await stateFor([...ALL.filter((f) => f !== 'InventoryReport.xlsx').map(read), renameColumn('InventoryReport.xlsx', 'Material', 'Artikel')]);
+    const s = await stateFor([...ALL.filter((f) => f !== 'InventoryReport.xlsx').map(read), renameColumn('InventoryReport.xlsx', 'Material', 'Artikel')], 'intro');
     expect(s.imports.inventory).toBeUndefined();
-    renderAllTabs(s);
+    renderAll(s);
   });
 });

@@ -3,7 +3,7 @@ import type { ReportKind } from '@copilot/engine';
 import { api, type IngestResult, type StateResponse } from '../api.ts';
 import { ageLabel, ageTone, Badge, cx, Panel, useNow } from '../components/ui.tsx';
 
-type Unknown = Extract<IngestResult, { ok: false }> & { source: File | string };
+export type Unknown = Extract<IngestResult, { ok: false }> & { source: File | string };
 
 function Mapping({ s, u, onDone }: { s: StateResponse; u: Unknown; onDone: (r: IngestResult[]) => void }) {
   const [kind, setKind] = useState<ReportKind>(s.reports[0].kind);
@@ -59,15 +59,15 @@ function Mapping({ s, u, onDone }: { s: StateResponse; u: Unknown; onDone: (r: I
   );
 }
 
-export function Ingest({ s }: { s: StateResponse }) {
+export function Ingest({ s, pending = [] }: { s: StateResponse; pending?: Unknown[] }) {
   const now = useNow(5000);
   const [drag, setDrag] = useState(false);
   const [busy, setBusy] = useState(false);
   const [results, setResults] = useState<IngestResult[]>([]);
-  const [unknown, setUnknown] = useState<Unknown[]>([]);
+  const [unknown, setUnknown] = useState<Unknown[]>(pending);
   const [text, setText] = useState('');
   const [invDay, setInvDay] = useState<string>('');
-  const dataDay = s.snapshot.analysis.clock.gameDay || null;
+  const dataDay = s.snapshot.clock.gameDay || null;
 
   const handle = (res: IngestResult[], sources: (File | string)[]) => {
     setResults(res);
@@ -91,16 +91,16 @@ export function Ingest({ s }: { s: StateResponse }) {
   };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="space-y-4">
       <div className="space-y-4">
         <label
           onDragOver={(e) => (e.preventDefault(), setDrag(true))}
           onDragLeave={() => setDrag(false)}
           onDrop={onDrop}
-          className={cx('flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-2xl border-4 border-dashed p-8 text-center', drag ? 'border-accent bg-accent/10' : 'border-line bg-panel')}
+          className={cx('flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-4 border-dashed p-8 text-center', drag ? 'border-accent bg-accent/10' : 'border-line bg-panel')}
         >
-          <div className="text-3xl font-bold">{busy ? 'Nahrávám…' : 'Přetáhni sem xlsx exporty'}</div>
-          <div className="mt-2 text-mute">víc souborů najednou · typ reportu se pozná podle hlaviček · nebo klikni a vyber</div>
+          <div className="text-2xl font-bold">{busy ? 'Nahrávám…' : 'Další xlsx: ProcSourcing, PurchaseOrderTracking, ProductionReport, Company-Valuation'}</div>
+          <div className="mt-2 text-mute">víc souborů najednou · typ se pozná podle hlaviček · SummarySales se přijme taky</div>
           <input type="file" multiple accept=".xlsx,.xls,.csv,.tsv,.txt" className="hidden" onChange={(e) => void upload([...(e.target.files ?? [])])} />
         </label>
 
@@ -188,7 +188,7 @@ export function Ingest({ s }: { s: StateResponse }) {
                     <div className="text-xs text-mute">Fiori: {r.fiori}</div>
                   </td>
                   <td className="text-right">
-                    <Badge tone={tone}>{tone === 'good' ? '🟢' : tone === 'high' ? '🟠' : '🔴'} {ageLabel(imp?.importedAt, now)}</Badge>
+                    <Badge tone={tone}>{{ good: '🟢', high: '🟠', crit: '🔴', none: '⚪' }[tone]} {ageLabel(imp?.importedAt, now)}</Badge>
                     {imp && <div className="text-xs text-mute">{imp.rows} ř. · den {imp.gameDay ?? '–'}</div>}
                   </td>
                 </tr>

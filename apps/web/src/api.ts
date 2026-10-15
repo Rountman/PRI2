@@ -1,5 +1,5 @@
-import type { GameConfig, Howto, HowtoKey } from '@copilot/config';
-import type { ColumnSpec, FinanceSnapshot, ReportKind, Snapshot } from '@copilot/engine';
+import type { GameConfig } from '@copilot/config';
+import type { ClockOverride, ColumnSpec, FinanceSnapshot, ReportKind, Snapshot } from '@copilot/engine';
 
 export type ImportLog = { id: number; report: ReportKind; filename: string; rows: number; gameDay: number | null; importedAt: string; warnings: string[] };
 
@@ -12,8 +12,7 @@ export type StateResponse = {
   config: GameConfig;
   configOverride: Record<string, unknown>;
   presets: string[];
-  clock: { gameDay?: number | null; betweenRounds?: boolean };
-  howto: Record<HowtoKey, Howto>;
+  clock: ClockOverride;
   inventoryGameDay: number | null;
   finance: FinanceSnapshot[];
   reports: { kind: ReportKind; label: string; fiori: string; columns: ColumnSpec[] }[];
@@ -55,8 +54,7 @@ export const api = {
   setDone: (id: string, done: boolean) => req(`/api/cards/${encodeURIComponent(id)}`, json('POST', { done })),
   setConfig: (override: unknown) => req('/api/config', json('PUT', override)),
   setPreset: (preset: string) => req('/api/config/preset', json('POST', { preset })),
-  setHowto: (h: unknown) => req('/api/howto', json('PUT', h)),
-  setClock: (c: { gameDay?: number | null; betweenRounds?: boolean }) => req('/api/clock', json('PUT', c)),
+  setClock: (c: ClockOverride) => req('/api/clock', json('PUT', c)),
   setInventoryDay: (gameDay: number) => req('/api/inventory-day', json('PUT', { gameDay })),
   setPin: (pin: string) => req('/api/pin', json('PUT', { pin })),
   saveFinance: (f: Record<string, unknown>) => req('/api/finance', json('POST', f)),
