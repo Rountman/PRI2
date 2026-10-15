@@ -25,7 +25,9 @@ export function clockOf(ds: Dataset, cfg: GameConfig, ov: ClockOverride = {}): C
   }
   const g = latest ?? 0;
   const { round, day } = g ? fromGameDay(g, cfg.roundLength) : { round: 1, day: 0 };
-  const between = ov.phase === 'mezi-koly' || (ov.phase !== 'kolo' && !!ov.betweenRounds);
+  // day 20 of a round that is not the last one → between rounds automatically (override: phase 'kolo')
+  const roundOver = day >= cfg.roundLength && round < cfg.rounds;
+  const between = ov.phase === 'mezi-koly' || (ov.phase !== 'kolo' && (!!ov.betweenRounds || roundOver));
   return {
     gameDay: g,
     round,

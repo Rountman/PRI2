@@ -7,12 +7,25 @@ import { selectCards } from '../src/v2/cards.ts';
 import { setupMarginalTable } from '../src/v2/invest.ts';
 import { cutLots } from '../src/v2/lotsize.ts';
 import { buildModel, dailyDemand } from '../src/v2/model.ts';
+import { clockOf } from '../src/phase.ts';
 import { cfg, fixtureDataset } from './helpers.ts';
 
 const ext = resolveConfig();
 const BASIC = ['InventoryReport.xlsx', 'SalesReport.xlsx', 'PriceMarket.xlsx'];
 const ALL = ['Company-Valuation.xlsx', 'InventoryReport.xlsx', 'PriceMarket.xlsx', 'ProcSourcing.xlsx', 'ProductionReport.xlsx', 'PurchaseOrderTracking.xlsx', 'SalesReport.xlsx', 'SummarySalesReport.xlsx'];
 const only = (files: string[]) => fixtureDataset(ALL.filter((f) => !files.includes(f)));
+
+describe('phase switching', () => {
+  const ds = fixtureDataset();
+  it('day 19 → Kolo, day 20 → Mezi koly, last round day 20 stays Kolo, manual override wins', () => {
+    expect(clockOf(ds, ext, { gameDay: 59 }).label).toBe('Kolo 3 · den 19/20');
+    expect(clockOf(ds, ext, { gameDay: 60 })).toMatchObject({ phase: 'mezi-koly', label: 'Mezi koly (po kole 3)' });
+    expect(clockOf(ds, ext, { gameDay: 61 }).label).toBe('Kolo 4 · den 1/20');
+    expect(clockOf(ds, ext, { gameDay: 100 }).phase).toBe('kolo');
+    expect(clockOf(ds, ext, { gameDay: 60, phase: 'kolo' }).phase).toBe('kolo');
+    expect(clockOf(ds, ext, { phase: 'pred-hrou' }).phase).toBe('pred-hrou');
+  });
+});
 
 describe('lot size (guide table)', () => {
   it.each([
@@ -149,7 +162,7 @@ function check(ds: Dataset) {
 describe('fixtures (intro preset)', () => {
   it('all 8 reports', () => {
     const s = check(fixtureDataset());
-    expect(s.clock.label).toBe('Kolo 3 · den 20/20');
+    expect(s.clock.label).toBe('Mezi koly (po kole 3)');
     expect(s.header.valuation).toBeCloseTo(77_388_994.4, 1);
     expect(s.md61.wipKnown).toBe(true);
     expect(s.cards.length).toBeGreaterThan(0);

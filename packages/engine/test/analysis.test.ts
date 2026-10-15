@@ -5,8 +5,8 @@ import { cfg, fixtureDataset } from './helpers.ts';
 const a = analyze(fixtureDataset(), cfg);
 
 describe('clock', () => {
-  it('latest day = 03/20 → Kolo 3 · den 20/20', () => {
-    expect(a.clock).toMatchObject({ gameDay: 60, round: 3, day: 20, phase: 'kolo', label: 'Kolo 3 · den 20/20' });
+  it('latest day = 03/20 → Mezi koly (po kole 3)', () => {
+    expect(a.clock).toMatchObject({ gameDay: 60, round: 3, day: 20, phase: 'mezi-koly', label: 'Mezi koly (po kole 3)' });
   });
 });
 

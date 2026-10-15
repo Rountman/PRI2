@@ -74,7 +74,7 @@ describe('e2e: one screen', () => {
     renderAll(s);
     const { container, getByTestId } = render(<Shell s={s} online={false} lastOk={new Date()} />);
     expect(container.textContent).toContain('offline');
-    expect(getByTestId('phase').textContent).toBe('Kolo 3 · den 20/20');
+    expect(getByTestId('phase').textContent).toBe('Mezi koly (po kole 3)');
     expect(getByTestId('chips').textContent).toMatch(/🟢 Sklad.*🟢 Prodeje.*🟢 Trh/);
     const n = getByTestId('cards').children.length;
     expect(n).toBeGreaterThan(0);

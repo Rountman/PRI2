@@ -34,6 +34,15 @@ describe('server', () => {
     expect(st.inventoryGameDay).toBe(60);
   });
 
+  it('file names do not matter: "export (n).xlsx" is detected by its headers', async () => {
+    const { app } = createApp(new Store());
+    const fd = new FormData();
+    files.forEach((n, i) => fd.append('files', new File([fs.readFileSync(path.join(FIX, n))], `export (${i + 1}).xlsx`)));
+    const out = (await (await app.request('/api/ingest', { method: 'POST', body: fd })).json()) as { results: { ok: boolean; kind: string }[] };
+    expect(out.results.every((r) => r.ok)).toBe(true);
+    expect(out.results.map((r) => r.kind).sort()).toEqual(['inventory', 'market', 'production', 'purchases', 'sales', 'sourcing', 'summary', 'valuation']);
+  });
+
   it('re-import is idempotent (upsert by natural key)', async () => {
     const store = new Store();
     const { app } = createApp(store);

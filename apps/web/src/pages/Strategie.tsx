@@ -24,16 +24,16 @@ const SECTIONS: { title: string; items: string[] }[] = [
     ],
   },
   {
-    title: 'Během kola (každý cyklus)',
+    title: 'Během kola (každých 5 herních dní)',
     items: [
-      'Nahraj ZMB52 + ZVA05 (+ ZMARKET každých 5 dní).',
+      'Den 4–5, 9–10, 14–15, 19–20: stáhni ZMB52 + ZVA05 + ZMARKET a přetáhni všechny 3 najednou. Názvy souborů jsou jedno – appka pozná report podle obsahu.',
       'MD61 podle tabulky → MD01 → zkontroluj planned orders → ME59N → CO41.',
       'VK32: pokrytí < 3 dny → +0,30 €, > 8 dní → −0,30 € (ne pod kotvu trhu −10 %), nikdy pod unit cost.',
       'Max 5 karet, max 2 kritické – vždy nahoře to s největším dopadem v €.',
     ],
   },
   {
-    title: 'Mezi koly',
+    title: 'Mezi koly (zapne se samo po 20. dni)',
     items: ['Splátka úvěru: cash − rezerva (rating se nemění, úrok klesá).', 'Setup / kapacita jen s návratností.', 'Lot size jen přes MM02 se svolením instruktora.'],
   },
   {

@@ -93,7 +93,7 @@ const EXTENDED: GameConfig = {
   valuationChartSkipDays: 2,
   calibrationTolerance: 0.05,
   financeMatchTolerance: 0.005,
-  dataAgeSec: { green: 180, orange: 600 },
+  dataAgeSec: { green: 360, orange: 900 }, // upload rhythm = every 5 game days (~5 min)
   ignoreVendors: ['V03'],
 };
 

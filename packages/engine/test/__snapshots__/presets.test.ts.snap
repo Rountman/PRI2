@@ -52,8 +52,8 @@ exports[`preset extended (CLAUDE.md kap. 2) > snapshot 1`] = `
     },
   ],
   "dataAgeSec": {
-    "green": 180,
-    "orange": 600,
+    "green": 360,
+    "orange": 900,
   },
   "defaultRating": "A−",
   "depreciationPerDayPerM": 416.6666666666667,
