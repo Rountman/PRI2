@@ -30,7 +30,7 @@ exports[`preset extended (CLAUDE.md kap. 2) > snapshot 1`] = `
     },
     {
       "dc": "12",
-      "marketPer5DaysPerTeam": 360000,
+      "marketPer5DaysPerTeam": 220000,
       "marketingSensitivity": "střední",
       "name": "Grocery chains",
       "priceSensitivity": "vysoká",
@@ -41,7 +41,7 @@ exports[`preset extended (CLAUDE.md kap. 2) > snapshot 1`] = `
     },
     {
       "dc": "14",
-      "marketPer5DaysPerTeam": 135000,
+      "marketPer5DaysPerTeam": 130000,
       "marketingSensitivity": "vysoká",
       "name": "Independent grocers",
       "priceSensitivity": "střední",

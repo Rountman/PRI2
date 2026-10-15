@@ -25,8 +25,8 @@ describe('preset extended (CLAUDE.md kap. 2)', () => {
     expect(ext.storageExtraPerDay).toEqual({ finishedGoods: 500, raw: 1_000, packaging: 100 });
     expect(ext.channels.map((c) => [c.dc, c.sizes, c.marketPer5DaysPerTeam])).toEqual([
       ['10', ['1kg'], 90_000],
-      ['12', ['500g', '1kg'], 360_000],
-      ['14', ['500g'], 135_000],
+      ['12', ['500g', '1kg'], 220_000],
+      ['14', ['500g'], 130_000],
     ]);
     expect(ext.recipeMin).toMatchObject({ oats: 0.3, wheat: 0.2, flavor: 0.2, mixedFruitNuts: 0.3 });
     expect(ext.recipes['2']).toEqual({ R06: 0.35, R05: 0.35, R02: 0.3 });

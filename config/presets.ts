@@ -71,10 +71,11 @@ const EXTENDED: GameConfig = {
   maxCritical: 2,
 
   marketingEurPerRegionDay: 1_000,
+  // market size per team per week: Job aid Manufacturing Extended (HEC Montréal, 2020) – DC12 €220k, DC14 €130k
   channels: [
     { dc: '10', name: 'Hypermarkety', sizes: ['1kg'], marketPer5DaysPerTeam: 90_000, priceSensitivity: 'velmi vysoká', marketingSensitivity: 'nízká' },
-    { dc: '12', name: 'Grocery chains', sizes: ['500g', '1kg'], marketPer5DaysPerTeam: 360_000, priceSensitivity: 'vysoká', marketingSensitivity: 'střední' },
-    { dc: '14', name: 'Independent grocers', sizes: ['500g'], marketPer5DaysPerTeam: 135_000, priceSensitivity: 'střední', marketingSensitivity: 'vysoká' },
+    { dc: '12', name: 'Grocery chains', sizes: ['500g', '1kg'], marketPer5DaysPerTeam: 220_000, priceSensitivity: 'vysoká', marketingSensitivity: 'střední' },
+    { dc: '14', name: 'Independent grocers', sizes: ['500g'], marketPer5DaysPerTeam: 130_000, priceSensitivity: 'střední', marketingSensitivity: 'vysoká' },
   ],
   areas: ['N', 'S', 'W'],
   recipes: {

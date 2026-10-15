@@ -119,7 +119,7 @@ describe('demand (5.1)', () => {
     const d = dailyDemand(emptyDataset(), ext, 0, analyze(emptyDataset(), ext).stockPath, 'F12');
     expect(d.source).toBe('preset');
     expect(d.byDc['10']).toBeCloseTo(90_000 / 5 / 2 / 7.2, 6);
-    expect(d.byDc['12']).toBeCloseTo(360_000 / 5 / 4 / 7.5, 6);
+    expect(d.byDc['12']).toBeCloseTo(220_000 / 5 / 4 / 7.5, 6);
   });
 });
 
