@@ -77,15 +77,15 @@ export function ActionCard({ card, compact = false }: { card: Card; compact?: bo
           {!card.done && <p className="mt-1 text-mute">{card.why.summary}</p>}
           {!compact && !card.done && (
             <ol className="mt-2 list-decimal space-y-0.5 pl-5 text-[0.95rem]">
-              {card.steps.slice(0, 6).map((s, i) => (
+              {card.steps.slice(0, 10).map((s, i) => (
                 <li key={i}>{s}</li>
               ))}
-              {card.steps.length > 6 && <li className="list-none text-mute">… +{card.steps.length - 6} kroků (?)</li>}
+              {card.steps.length > 10 && <li className="list-none text-mute">… +{card.steps.length - 10} kroků (?)</li>}
             </ol>
           )}
           {!compact && !card.done && !!card.copyValues?.length && (
             <div className="mt-2 flex flex-wrap gap-2">
-              {card.copyValues.slice(0, 6).map((v, i) => (
+              {card.copyValues.slice(0, 12).map((v, i) => (
                 <CopyValue key={i} label={v.label} value={v.value} />
               ))}
             </div>
