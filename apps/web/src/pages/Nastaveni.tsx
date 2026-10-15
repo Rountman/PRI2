@@ -7,7 +7,7 @@ import { cx, Panel } from '../components/ui.tsx';
 const LABELS: Record<string, string> = {
   teamCode: 'Kód týmu (prefix materiálu, např. GG → GG-F01)',
   roundLength: 'Délka kola (dny)',
-  rounds: 'Počet kol [OVĚŘIT]',
+  rounds: 'Počet kol',
   'initial.cash': 'Počáteční cash €',
   'initial.loan': 'Počáteční úvěr €',
   'initial.machines': 'Stroje €',

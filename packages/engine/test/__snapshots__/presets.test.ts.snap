@@ -267,7 +267,7 @@ exports[`preset extended (CLAUDE.md kap. 2) > snapshot 1`] = `
   },
   "riskFreeRate": 0.07,
   "roundLength": 20,
-  "rounds": 4,
+  "rounds": 5,
   "setup": {
     "k": 250000,
     "minHours": 2,

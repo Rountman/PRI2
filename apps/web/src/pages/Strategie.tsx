@@ -48,7 +48,6 @@ const SECTIONS: { title: string; items: string[] }[] = [
   {
     title: 'Otevřené [OVĚŘIT]',
     items: [
-      'Počet kol soutěže (default 4) – u organizátora.',
       'Jak MD61 spotřebovává prognózu prodeji (přepínač režimu v Nastavení).',
       'Sortiment, startovní ceny, setup 125k, boost poptávky × 1,2 – odhady.',
       'Úrok závisí na ratingu a prime rate – může se změnit.',

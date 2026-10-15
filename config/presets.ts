@@ -33,7 +33,7 @@ const EXTENDED: GameConfig = {
   preset: 'extended',
   teamCode: 'GG',
   roundLength: 20,
-  rounds: 4, // [OVĚŘIT] u organizátora
+  rounds: 5, // potvrzeno týmem GG: 5 simulačních kol
   initial: { cash: 2_000_000, loan: 8_000_000, machines: 24_000_000, finishedGoodsPerSku: 0 },
   capacityPerDay: 24_000,
   capacityInUnits: true,

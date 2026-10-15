@@ -107,7 +107,7 @@ describe('what-if', () => {
     const w = whatIf(extFin, ext, { repayLoan: 1_000_000, capacityEUR: 0, setupEUR: 0, marginPerUnit: 5, changeoversPerRound: 8 });
     expect(w.ratingChanged).toBe(false);
     expect(w.after.debtLoading).toBeCloseTo(w.before.debtLoading, 2);
-    expect(w.effects[0].profit).toBeCloseTo(330.6 * 60, 0); // 3 rounds × 20 days left
+    expect(w.effects[0].profit).toBeCloseTo(330.6 * 80, 0); // 4 rounds × 20 days left (5 rounds total)
     expect(w.deltaValuation).toBeGreaterThan(0);
   });
 

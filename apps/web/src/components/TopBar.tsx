@@ -121,7 +121,7 @@ export function ValuationBadge({ s }: { s: StateResponse }) {
           Teď: rating <b className="text-ink">{h.rating}</b>, diskont <b className="text-ink">{fmtPct(h.discount, 2)}</b> ({h.ratingSource === 'finance' ? 'z ručně opsaných financí' : 'výchozí z presetu – start: 2M − 8M = −6M → A−'}).
         </p>
         <p>{h.valuationSource === 'Company-Valuation' ? 'Číslo valuace je z reportu Company-Valuation.' : h.valuationSource === 'finance' ? 'Číslo valuace je spočtené z ručních financí.' : 'Valuace se ukáže po nahrání Company-Valuation nebo opsání financí (Rozšířené).'}</p>
-        <p>Počet kol: {fmtNum(s.config.rounds)} [OVĚŘIT u organizátora].</p>
+        <p>Počet kol: {fmtNum(s.config.rounds)} (změna v Nastavení).</p>
       </Info>
     </div>
   );
