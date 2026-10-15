@@ -26,9 +26,10 @@ describe('server', () => {
     expect(out.results).toHaveLength(8);
     expect(out.results.every((r) => r.ok)).toBe(true);
     const st = (await (await app.request('/api/state')).json()) as any;
-    expect(st.snapshot.analysis.clock.gameDay).toBe(60);
+    expect(st.snapshot.clock.gameDay).toBe(60);
     expect(st.snapshot.cards.length).toBeGreaterThan(3);
-    expect(st.snapshot.critical.length).toBeGreaterThan(0);
+    expect(st.snapshot.cards.length).toBeLessThanOrEqual(5);
+    expect(st.snapshot.md61.rows.length).toBeGreaterThan(0);
     expect(Object.keys(st.imports).sort()).toEqual(['inventory', 'market', 'production', 'purchases', 'sales', 'sourcing', 'summary', 'valuation']);
     expect(st.inventoryGameDay).toBe(60);
   });
@@ -60,12 +61,21 @@ describe('server', () => {
     expect(r2.results[0]).toMatchObject({ ok: true, kind: 'valuation', rows: 1 });
   });
 
+  it('empty server → Před hrou, 7 checklist cards, A−', async () => {
+    const { app } = createApp(new Store());
+    const st = (await (await app.request('/api/state')).json()) as any;
+    expect(st.config.preset).toBe('extended');
+    expect(st.snapshot.clock.phase).toBe('pred-hrou');
+    expect(st.snapshot.cards).toHaveLength(7);
+    expect(st.snapshot.header.rating).toBe('A−');
+  });
+
   it('card done state is shared', async () => {
     const { app } = createApp(new Store());
-    await ingestAll(app);
-    await app.request(`/api/cards/${encodeURIComponent('R3:DC10')}`, { method: 'POST', body: JSON.stringify({ done: true }), headers: { 'content-type': 'application/json' } });
+    const id = 'start:2-recept';
+    await app.request(`/api/cards/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify({ done: true }), headers: { 'content-type': 'application/json' } });
     const st = (await (await app.request('/api/state')).json()) as any;
-    expect(st.snapshot.cards.find((c: any) => c.id === 'R3:DC10').done).toBe(true);
+    expect(st.snapshot.cards.find((c: any) => c.id === id).done).toBe(true);
   });
 
   it('PIN protects API; login sets cookie', async () => {
@@ -84,14 +94,20 @@ describe('server', () => {
     const { app } = createApp(new Store());
     await ingestAll(app);
     const j = { 'content-type': 'application/json' };
-    await app.request('/api/config/preset', { method: 'POST', body: JSON.stringify({ preset: 'extended' }), headers: j });
+    await app.request('/api/config/preset', { method: 'POST', body: JSON.stringify({ preset: 'intro' }), headers: j });
     let st = (await (await app.request('/api/state')).json()) as any;
-    expect(st.config.preset).toBe('extended');
-    expect(st.config.initial.loan).toBe(8_000_000);
-    expect(st.snapshot.warnings.map((w: any) => w.id)).toContain('initial-stock');
-    await app.request('/api/clock', { method: 'PUT', body: JSON.stringify({ betweenRounds: true }), headers: j });
+    expect(st.config.preset).toBe('intro');
+    expect(st.config.initial.loan).toBe(0);
+    await app.request('/api/config', { method: 'PUT', body: JSON.stringify({ preset: 'intro', assortment: ['F01'] }), headers: j });
     st = (await (await app.request('/api/state')).json()) as any;
-    expect(st.snapshot.analysis.clock.phase).toBe('pred');
+    expect(st.config.assortment).toEqual(['F01']);
+    await app.request('/api/clock', { method: 'PUT', body: JSON.stringify({ phase: 'mezi-koly' }), headers: j });
+    st = (await (await app.request('/api/state')).json()) as any;
+    expect(st.snapshot.clock.phase).toBe('mezi-koly');
+    await app.request('/api/clock', { method: 'PUT', body: JSON.stringify({ phase: 'pred-hrou' }), headers: j });
+    st = (await (await app.request('/api/state')).json()) as any;
+    expect(st.snapshot.clock.phase).toBe('pred-hrou');
+    expect(st.snapshot.cards).toHaveLength(7);
   });
 
   it('reset requires confirmation', async () => {

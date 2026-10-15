@@ -12,8 +12,7 @@
     "@copilot/config": "*",
     "@copilot/engine": "*",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "recharts": "^3.10.1"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

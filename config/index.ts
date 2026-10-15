@@ -1,2 +1,2 @@
 export * from './game.ts';
-export * from './howto.ts';
+export * from './presets.ts';

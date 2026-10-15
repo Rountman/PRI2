@@ -16,24 +16,16 @@ export function Panel({ title, right, children, className }: { title?: ReactNode
   );
 }
 
-export function Badge({ children, tone = 'mid', className }: { children: ReactNode; tone?: 'crit' | 'high' | 'mid' | 'good' | 'accent'; className?: string }) {
+export function Badge({ children, tone = 'mid', className }: { children: ReactNode; tone?: 'crit' | 'high' | 'mid' | 'good' | 'accent' | 'none'; className?: string }) {
   const tones = {
     crit: 'bg-crit/20 text-red-300 border-crit/40',
     high: 'bg-high/20 text-amber-200 border-high/40',
     mid: 'bg-mid/20 text-slate-300 border-mid/40',
     good: 'bg-good/15 text-emerald-300 border-good/40',
     accent: 'bg-accent/15 text-sky-300 border-accent/40',
+    none: 'bg-panel2 text-mute border-line',
   };
   return <span className={cx('inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold', tones[tone], className)}>{children}</span>;
-}
-
-/** Explains where a number comes from – degrades to "nahraj X" when the input is missing. */
-export function Missing({ what, children }: { what: string; children?: ReactNode }) {
-  return (
-    <div className="rounded-lg border border-dashed border-line p-4 text-mute">
-      Nahraj <b className="text-ink">{what}</b> – {children ?? 'bez něj tahle analýza nejde spočítat.'}
-    </div>
-  );
 }
 
 // ---------- copy ----------
@@ -58,7 +50,7 @@ export async function copyText(text: string): Promise<boolean> {
   return ok;
 }
 
-export function CopyValue({ label, value }: { label?: string; value: string }) {
+export function CopyValue({ label, value, display, className }: { label?: string; value: string; display?: string; className?: string }) {
   const [ok, setOk] = useState(false);
   return (
     <button
@@ -67,11 +59,11 @@ export function CopyValue({ label, value }: { label?: string; value: string }) {
         setOk(await copyText(value));
         setTimeout(() => setOk(false), 1200);
       }}
-      className="group inline-flex items-center gap-2 rounded-md border border-line bg-panel2 px-2 py-1 text-sm hover:border-accent"
-      title="Kopírovat do schránky"
+      className={cx('group inline-flex items-center gap-2 rounded-md border border-line bg-panel2 px-2 py-1 text-sm hover:border-accent', className)}
+      title={`Kopírovat ${value}`}
     >
       {label && <span className="text-mute">{label}</span>}
-      <span className="num font-mono font-semibold">{value}</span>
+      <span className="num font-mono font-semibold">{display ?? value}</span>
       <span className={cx('text-xs', ok ? 'text-good' : 'text-mute group-hover:text-accent')}>{ok ? '✓' : '⧉'}</span>
     </button>
   );
@@ -142,8 +134,8 @@ export function ageLabel(iso: string | undefined, now: number): string {
   return `${Math.round(s / 3600)} h`;
 }
 
-export function ageTone(iso: string | undefined, now: number, cfg: { green: number; orange: number }): 'good' | 'high' | 'crit' {
-  if (!iso) return 'crit';
+export function ageTone(iso: string | undefined, now: number, cfg: { green: number; orange: number }): 'good' | 'high' | 'crit' | 'none' {
+  if (!iso) return 'none';
   const s = (now - Date.parse(iso)) / 1000;
   return s < cfg.green ? 'good' : s < cfg.orange ? 'high' : 'crit';
 }

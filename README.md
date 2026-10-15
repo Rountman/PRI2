@@ -15,22 +15,23 @@ Vývoj: `npm run dev` (API s watch + Vite na :5173) · testy: `npm test` · typy
 
 Data jsou v `data/copilot.sqlite`. Smazat je jde v Nastavení → „Smazat herní data“ (nastavení zůstanou).
 
-## Během hry
+## Během hry (jedna obrazovka)
 
-1. **Ingest** (klávesa 2): přetáhni všechny exporty najednou. Typ reportu se pozná podle hlaviček.
-2. **Velín** (1): nahoře max. 3 kritické karty, pod nimi další akce podle dopadu. Tlačítko (?) otevře boční panel s daty a postupem v SAPu, ✓ odškrtne kartu pro celý tým.
-3. **Finance** (5): jednou za kolo opiš rozvahu. Appka hned ukáže ✅ / ❌ shodu s reportovanou valuací, rating a what-if.
-4. **Nastavení** (7): předvolba Intro / Extended a všechny parametry. Během eventu se nesahá do kódu.
+1. **Před hrou** (bez dat): startovní checklist – sortiment, recept, VK32 ceny, setup, MD61 1. cyklu, MRP. Hodnoty se kopírují kliknutím.
+2. **Drop xlsx** nahoře: InventoryReport (ZMB52), SalesReport (ZVA05), PriceMarket (ZMARKET). Čipy vedle ukazují stáří dat.
+3. **Co udělat teď**: max 5 karet (max 2 kritické). (?) otevře boční panel s důvodem, ✓ odškrtne kartu celému týmu.
+4. **MD61** a **VK32** tabulky ve tvaru SAP formulářů – klik na číslo = kopírovat.
+5. **Rozšířené ▸**: další importy + ruční finance, investice (what-if), recept, marketing, strategie, nastavení (preset, sortiment, startovní ceny, všechny parametry).
 
-Předpoklady a [OVĚŘIT] body: [docs/assumptions.md](docs/assumptions.md).
+Zadání a [OVĚŘIT] body: [CLAUDE.md](CLAUDE.md).
 
 ## Struktura
 
 ```
-config/            herní parametry (presety intro / extended), návody per T-code
-packages/engine/   čisté funkce: parsery, normalizace, analýzy, BOM, finance, pravidla R1–R15
+config/            herní parametry: typy (game.ts), presety extended (default) / intro (testy)
+packages/engine/   čisté funkce: parsery, analýzy, BOM, finance, v2/ (poptávka, MD61, VK32, investice, alerty, checklist)
 apps/server/       Hono + better-sqlite3 + SSE, PIN
-apps/web/          Vite + React + Tailwind + Recharts
+apps/web/          Vite + React + Tailwind – jedna obrazovka + drawer Rozšířené
 scripts/           npm run game / game:share / dev
 fixtures/          exporty z cvičné hry (tým GG)
 ```

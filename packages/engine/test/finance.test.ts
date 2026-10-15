@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolveConfig, setupHours } from '@copilot/config';
-import { analyze } from '../src/analysis/index.ts';
 import { companyValue, debtLoading, discountRate, impliedProfit, ratingDistance, ratingFor } from '../src/finance/index.ts';
 import { calibrate, whatIf } from '../src/finance/whatif.ts';
-import { makeCtx, RULES } from '../src/rules/index.ts';
 import type { FinanceSnapshot } from '../src/types.ts';
 import { cfg, fixtureDataset } from './helpers.ts';
 
@@ -133,31 +131,6 @@ describe('what-if', () => {
   it('warns when cash drops below reserve', () => {
     const w = whatIf(extFin, ext, { repayLoan: 3_900_000, capacityEUR: 0, setupEUR: 0, marginPerUnit: 5, changeoversPerRound: 8 });
     expect(w.warnings.join(' ')).toMatch(/rezerv/);
-  });
-});
-
-describe('R13 / R14 with finance data', () => {
-  it('R13: no loan in Intro → no card; with loan → repay card that keeps rating', () => {
-    const ds = { ...fixtureDataset(), finance: [INTRO_FIN] };
-    const r13 = RULES.find((r) => r.meta.id === 'R13')!;
-    expect(r13.run(makeCtx(ds, cfg, analyze(ds, cfg)))).toEqual([]);
-    const ds2 = { ...ds, finance: [{ ...INTRO_FIN, loan: 2_000_000 }] };
-    const [c] = r13.run(makeCtx(ds2, cfg, analyze(ds2, cfg)));
-    expect(c.title).toMatch(/Splať/);
-    expect(c.impactEUR!).toBeGreaterThan(0);
-    expect(c.why.data.find((d) => d.label.startsWith('Rating'))!.value).toMatch(/AA\+ \/ AA\+|AAA\+ \/ AAA\+|(\S+) \/ \1/);
-  });
-
-  it('R14: AAA+ reserve in Intro and many changeovers → setup investment keeps rating', () => {
-    const ds = { ...fixtureDataset(), finance: [INTRO_FIN] };
-    const r14 = RULES.find((r) => r.meta.id === 'R14')!;
-    const cards = r14.run(makeCtx(ds, cfg, analyze(ds, cfg)));
-    for (const c of cards) expect(c.why.summary).toMatch(/AAA\+/);
-  });
-
-  it('rules without finance stay silent', () => {
-    const ds = fixtureDataset();
-    for (const id of ['R13', 'R14']) expect(RULES.find((r) => r.meta.id === id)!.run(makeCtx(ds, cfg, analyze(ds, cfg)))).toEqual([]);
   });
 });
 

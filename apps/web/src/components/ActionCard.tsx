@@ -5,8 +5,7 @@ import { Badge, CopyValue, cx, useSidePanel } from './ui.tsx';
 
 const PRIO = {
   kritické: { border: 'border-l-crit', tone: 'crit' as const },
-  vysoká: { border: 'border-l-high', tone: 'high' as const },
-  střední: { border: 'border-l-mid', tone: 'mid' as const },
+  běžné: { border: 'border-l-accent', tone: 'accent' as const },
 };
 
 export function WhyBody({ card }: { card: Card }) {
@@ -19,9 +18,9 @@ export function WhyBody({ card }: { card: Card }) {
       </div>
       {card.impactEUR !== undefined && (
         <div className="rounded-lg bg-panel2 p-3">
-          <div className="text-sm text-mute">Odhad dopadu na valuaci</div>
-          <div className="num text-2xl font-bold text-good">{fmtEUR(card.impactEUR)}</div>
-          {card.profitEUR !== undefined && <div className="text-sm text-mute">z toho profit/marže {fmtEUR(card.profitEUR)} (× 12 / kola / diskont)</div>}
+          <div className="text-sm text-mute">Odhad dopadu</div>
+          <div className="num text-2xl font-bold text-good">{fmtEUR(card.profitEUR)}</div>
+          <div className="text-sm text-mute">≈ {fmtEUR(card.impactEUR)} na valuaci (× 12 / kola / diskont)</div>
         </div>
       )}
       <div>
@@ -70,12 +69,12 @@ export function ActionCard({ card, compact = false }: { card: Card; compact?: bo
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-2">
-            <Badge tone={p.tone}>{card.priority}</Badge>
+            {card.priority === 'kritické' && <Badge tone={p.tone}>KRITICKÉ</Badge>}
             <Badge tone="accent">{card.tcode}</Badge>
             {card.deadline && <span className="text-sm text-high">⏱ {card.deadline}</span>}
           </div>
           <h3 className={cx('font-bold leading-snug', compact ? 'text-lg' : 'text-xl', card.done && 'line-through')}>{card.title}</h3>
-          <p className="mt-1 text-mute">{card.why.summary}</p>
+          {!card.done && <p className="mt-1 text-mute">{card.why.summary}</p>}
           {!compact && !card.done && (
             <ol className="mt-2 list-decimal space-y-0.5 pl-5 text-[0.95rem]">
               {card.steps.slice(0, 6).map((s, i) => (
@@ -93,10 +92,10 @@ export function ActionCard({ card, compact = false }: { card: Card; compact?: bo
           )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
-          {card.impactEUR !== undefined && (
+          {!!card.profitEUR && card.profitEUR > 0 && (
             <div className="text-right">
-              <div className="num text-xl font-bold text-good">+{fmtShort(card.impactEUR)} €</div>
-              <div className="text-xs text-mute">valuace</div>
+              <div className="num text-xl font-bold text-good">+{fmtShort(card.profitEUR)} €</div>
+              <div className="text-xs text-mute">odhad dopadu</div>
             </div>
           )}
           <div className="flex gap-2">
@@ -106,9 +105,9 @@ export function ActionCard({ card, compact = false }: { card: Card; compact?: bo
             <button
               onClick={() => void api.setDone(card.id, !card.done)}
               className={cx('h-10 rounded-lg border px-3 font-semibold', card.done ? 'border-line text-mute' : 'border-good/50 text-good hover:bg-good/10')}
-              title="Odškrtnout pro celý tým"
+              title={card.done ? 'Vrátit' : 'Hotovo – odškrtne se celému týmu'}
             >
-              {card.done ? '↺' : '✓ hotovo'}
+              {card.done ? '↺' : '✓'}
             </button>
           </div>
         </div>

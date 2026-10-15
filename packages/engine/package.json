@@ -9,7 +9,8 @@
     "./normalize": "./src/normalize.ts",
     "./finance": "./src/finance/index.ts",
     "./whatif": "./src/finance/whatif.ts",
-    "./numbers": "./src/numbers.ts"
+    "./numbers": "./src/numbers.ts",
+    "./bom": "./src/bom.ts"
   },
   "dependencies": {
     "@copilot/config": "*",

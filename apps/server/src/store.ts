@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { DEFAULT_HOWTO, resolveConfig, type DeepPartial, type GameConfig, type Howto, type HowtoKey } from '@copilot/config';
+import { resolveConfig, type DeepPartial, type GameConfig } from '@copilot/config';
 import {
   emptyDataset,
   latestGameDay,
@@ -57,9 +57,6 @@ export class Store {
   }
   config(): GameConfig {
     return resolveConfig(this.configOverride());
-  }
-  howto(): Record<HowtoKey, Howto> {
-    return { ...DEFAULT_HOWTO, ...this.getSetting<Partial<Record<HowtoKey, Howto>>>('howto', {}) };
   }
   clock(): ClockOverride {
     return this.getSetting<ClockOverride>('clock', {});

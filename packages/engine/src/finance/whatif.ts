@@ -1,4 +1,4 @@
-import { setupHours, type GameConfig } from '@copilot/config';
+import { cashReserve, setupHours, type GameConfig } from '@copilot/config';
 import type { Dataset, FinanceSnapshot } from '../types.ts';
 import { companyValue, debtLoading, discountRate, latestFinance, ratingByName, ratingDistance, ratingFor, impliedProfit } from './index.ts';
 
@@ -133,7 +133,8 @@ export function whatIf(f: FinanceSnapshot, cfg: GameConfig, inp: WhatIfInput, fa
   }
   const dProfit = effects.reduce((s, e) => s + e.profit, 0);
   const cash = f.cash - repay - inp.capacityEUR - inp.setupEUR;
-  if (cash < cfg.cashReserve) warnings.push(`Cash klesne na ${Math.round(cash).toLocaleString('cs-CZ')} € – pod rezervou ${cfg.cashReserve.toLocaleString('cs-CZ')} €.`);
+  const reserve = cashReserve(cfg);
+  if (cash < reserve) warnings.push(`Cash klesne na ${Math.round(cash).toLocaleString('cs-CZ')} € – pod rezervou ${Math.round(reserve).toLocaleString('cs-CZ')} € (fixní náklady ${cfg.reserve.fixedDays} dní + buffer).`);
   const after = state(cash, f.loan - repay, profitEnd + dProfit, f.setupSpend + inp.setupEUR);
   return {
     remainingDays,

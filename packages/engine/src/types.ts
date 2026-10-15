@@ -153,19 +153,19 @@ export const emptyDataset = (): Dataset => ({
 });
 
 // ---------- Action cards ----------
-export type Priority = 'kritické' | 'vysoká' | 'střední';
+export type Priority = 'kritické' | 'běžné';
 export type Confidence = 'jisté' | 'pravděpodobné' | 'odhad';
-export type Phase = 'pred' | 'start' | 'beh' | 'konec';
+export type Phase = 'pred-hrou' | 'kolo' | 'mezi-koly';
 
 export type ActionCard = {
-  id: string;
-  ruleId: string;
+  id: string; // stable within one data state – used for shared [✓]
+  kind: string; // 'checklist' | 'md61' | 'vk32' | 'alert' | 'invest' …
   priority: Priority;
   title: string;
-  impactEUR?: number; // estimated valuation impact
-  profitEUR?: number; // estimated profit/margin impact behind it
+  profitEUR?: number; // estimated profit effect (sort key)
+  impactEUR?: number; // the same translated to valuation
   deadline?: string;
-  tcode: string;
+  tcode: string; // e.g. "MD61 → MD01 → ME59N"
   steps: string[];
   copyValues?: { label: string; value: string }[];
   why: {
