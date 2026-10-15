@@ -103,7 +103,7 @@ export function ActionCard({ card, compact = false }: { card: Card; compact?: bo
           )}
           {!compact && !card.done && !!card.copyValues?.length && (
             <div className="mt-2 flex flex-wrap gap-2">
-              {card.copyValues.slice(0, 12).map((v, i) => (
+              {card.copyValues.slice(0, 16).map((v, i) => (
                 <CopyValue key={i} label={v.label} value={v.value} />
               ))}
             </div>

@@ -6,3 +6,4 @@ export * from './invest.ts';
 export * from './checklist.ts';
 export * from './cards.ts';
 export * from './marketing.ts';
+export * from './assortment.ts';

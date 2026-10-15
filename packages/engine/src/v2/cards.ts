@@ -4,7 +4,7 @@ import { isFinishedGood } from '../normalize.ts';
 import type { ActionCard } from '../types.ts';
 import { avgMargin, capacityAdvice, changeoversPerRound, loanAdvice, setupMarginalTable } from './invest.ts';
 import type { Md61Plan, Md61Row } from './md61.ts';
-import { allowedDcs, type Model } from './model.ts';
+import { allowedDcs, sapOrder, type Model } from './model.ts';
 import type { Vk32Table } from './vk32.ts';
 
 const MRP = 'MD61 → MD01 → ME59N → CO41';
@@ -32,7 +32,7 @@ export function alerts(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] {
   if (a.has.inventory)
     for (const r of md.rows) {
       const d = r.demand.perDay;
-      if (d <= 0 || (!cfg.assortment.includes(r.sku) && r.stock <= 0 && r.wip <= 0)) continue;
+      if (d <= 0 || r.dropped) continue;
       const sold = r.stock <= 0;
       const cover = (r.stock + r.wip) / d;
       if (!sold && cover >= lead) continue;
@@ -184,7 +184,7 @@ export function alerts(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] {
   if (a.has.sales) {
     const W = cfg.md61.demandWindow;
     for (const ch of cfg.channels) {
-      const skus = md.rows.filter((r) => allowedDcs(cfg, r.sku).includes(ch.dc) && (r.stock > 0 || cfg.assortment.includes(r.sku)));
+      const skus = md.rows.filter((r) => allowedDcs(cfg, r.sku).includes(ch.dc) && (r.stock > 0 || m.assortment.includes(r.sku)));
       if (!skus.length) continue;
       if (ds.sales.some((s) => s.dc === ch.dc && s.gameDay > g - W)) continue;
       const cells = vk.rows.flatMap((r) => r.cells.filter((c) => c.dc === ch.dc && skus.some((s) => s.sku === r.sku)).map((c) => ({ sku: r.mat, c, cost: r.unitCost })));
@@ -222,15 +222,15 @@ export function roundCards(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] 
   const g = m.gameDay;
   const out: ActionCard[] = [];
 
-  const planned = md.rows.filter((r) => r.planned > 0);
-  if (planned.length && (a.has.inventory || a.has.sales)) {
+  const planned = md.rows.filter((r) => r.planned > 0 || r.dropped);
+  if (planned.some((r) => r.planned > 0) && (a.has.inventory || a.has.sales)) {
     const shortfall = planned.reduce((x, r) => x + Math.max(0, r.demand.perDay * md.horizon - r.stock - r.wip) * Math.max(0, r.margin), 0);
     out.push(
       card(m, {
         id: `md61:d${g}`,
         kind: 'md61',
         priority: 'běžné',
-        title: `MRP cyklus: ${planned.map((r) => `${r.mat} = ${fmtNum(r.forecast)}`).join(', ')}`,
+        title: `MRP cyklus: ${planned.filter((r) => !r.dropped).map((r) => `${r.mat} = ${fmtNum(r.forecast)}`).join(', ')}`,
         profitEUR: shortfall,
         tcode: MRP,
         steps: mrpSteps(md, planned),
@@ -286,6 +286,37 @@ export function roundCards(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] 
 
   if (a.clock.phase === 'mezi-koly') {
     out.push(...investCards(m, md));
+    const rv = m.review;
+    if (rv && cfg.assortmentAuto && rv.drop.length) {
+      const cycles = cfg.roundLength / Math.max(1, cfg.md61.nextMrpDays);
+      const saved = rv.drop.length * cycles * m.setupHours * (cfg.capacityPerDay / 24) * Math.max(0, avgMargin(m)) * m.remainingRounds;
+      out.push(
+        card(m, {
+          id: `sortiment:r${a.clock.round}`,
+          kind: 'sortiment',
+          priority: a.clock.round === 1 ? 'kritické' : 'běžné',
+          title: `Sortiment od kola ${a.clock.round + 1}: ${sapOrder(rv.keep).map(m.mat).join(', ')} · vyřadit ${sapOrder(rv.drop).map(m.mat).join(', ')}`,
+          profitEUR: saved,
+          tcode: 'MD61',
+          steps: [
+            ...sapOrder(rv.drop).map((s) => `MD61 ${m.mat(s)} = 0 (doprodat sklad, nevyrábět)`),
+            'Ostatní MD61 podle tabulky – appka už plánuje jen vybraných ' + rv.keep.length + '.',
+            'Ceny vyřazených nech na appce – při vysokém pokrytí je sama sníží.',
+          ],
+          copyValues: sapOrder(rv.drop).map((s) => ({ label: m.mat(s), value: '0' })),
+          why: {
+            summary: `Po ${rv.rounds}. kole: nejlepších ${rv.keep.length} podle tržeb celého trhu × naší marže (${rv.basis}). Každý vyřazený výrobek = o přestavbu linky méně v každém cyklu.`,
+            data: rv.rows.map((r) => ({
+              label: `${r.keep ? '✓' : '✗'} ${m.mat(r.sku)}`,
+              value: `trh ${Math.round(r.marketShareOfRevenue * 100)} % tržeb · cena ${r.price.toFixed(2)} € · marže ${Math.round(r.marginRate * 100)} %`,
+            })),
+            rule: 'Sortiment: plošně v 1. kole, pak top ' + cfg.assortmentTarget,
+            risk: 'Vypnout jde v Nastavení (Sortiment automaticky).',
+            confidence: rv.basis === 'ZMARKET' ? 'pravděpodobné' : 'odhad',
+          },
+        }),
+      );
+    }
   }
   return out;
 }

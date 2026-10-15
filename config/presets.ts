@@ -51,11 +51,15 @@ const EXTENDED: GameConfig = {
   defaultRating: 'A−', // start: 2M − 8M = −6M → A− → 12,25 %
   extraCapacityUtilization: 0.5,
 
-  assortment: ['F02', 'F03', 'F11', 'F12', 'F13'], // top 5 by market revenue in practice data (F11 = cheap nuts) [ODHAD]
+  // round 1 broad (all flavors except Original/Mixed), after round 1 keep the best 5 by market revenue × our margin
+  assortment: ['F01', 'F02', 'F03', 'F04', 'F11', 'F12', 'F13', 'F14'],
+  assortmentPool: ['F01', 'F02', 'F03', 'F04', 'F11', 'F12', 'F13', 'F14'],
+  assortmentTarget: 5,
+  assortmentAuto: true,
   startPrices: { '500g': 5.2, '1kg': 7.5, dcAdjust: { '10': -0.3, '12': 0, '14': 0.3 }, overrides: {} }, // [ODHAD]
   setupProposal: 125_000, // [ODHAD]
   md61: {
-    firstCycleQty: { '500g': 24_000, '1kg': 48_000 }, // 1 kg sells best and has the higher margin
+    firstCycleQty: { '500g': 16_000, '1kg': 24_000 }, // 8 SKUs + 8 setups must fit 10 days of capacity; 1 kg sells better
     nextMrpDays: 5,
     leadTimeMax: 5,
     stockoutBoost: 1.2,

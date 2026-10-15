@@ -6,6 +6,8 @@ import { cx, Panel } from '../components/ui.tsx';
 
 const LABELS: Record<string, string> = {
   teamCode: 'Kód týmu (prefix materiálu, např. GG → GG-F01)',
+  assortmentAuto: 'Sortiment po 1. kole vybírá appka',
+  assortmentTarget: 'Kolik výrobků nechat po 1. kole',
   roundLength: 'Délka kola (dny)',
   rounds: 'Počet kol',
   'initial.cash': 'Počáteční cash €',
@@ -58,7 +60,7 @@ const LABELS: Record<string, string> = {
   'dataAgeSec.orange': 'Čip 🟠 do (s)',
 };
 const GROUPS = ['initial', 'setup', 'fixedCosts', 'md61', 'md61.firstCycleQty', 'pricing', 'reserve', 'dataAgeSec', 'storage', 'storageExtraPerDay'];
-const SKIP = ['preset', 'assortment', 'startPrices'];
+const SKIP = ['preset', 'assortment', 'assortmentPool', 'startPrices'];
 
 type Field = { path: string; value: unknown };
 
@@ -128,7 +130,11 @@ export function Nastaveni({ s }: { s: StateResponse }) {
         <p className="mt-2 text-sm text-mute">Přepnutí předvolby zahodí ruční úpravy. Úpravy platí pro celý tým.</p>
       </Panel>
 
-      <Panel title="Sortiment" right={<SaveBtn />}>
+      <Panel title="Sortiment 1. kola" right={<SaveBtn />}>
+        <p className="mb-2 text-sm text-mute">
+          Teď appka plánuje: <b className="text-ink">{s.snapshot.assortment.current.join(', ')}</b>
+          {s.snapshot.assortment.review && cfg.assortmentAuto ? ` (vybráno po ${s.snapshot.assortment.review.rounds}. kole podle ${s.snapshot.assortment.review.basis})` : ''}
+        </p>
         <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
           {SKUS.map((sku) => (
             <label key={sku} className="flex items-center gap-2 text-sm">

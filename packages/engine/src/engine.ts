@@ -5,6 +5,7 @@ import type { ActionCard, Dataset } from './types.ts';
 import { alerts, roundCards, selectCards } from './v2/cards.ts';
 import { pregameChecklist } from './v2/checklist.ts';
 import { avgMargin, capacityAdvice, changeoversPerRound, loanAdvice, setupMarginalTable, type CapacityAdvice, type LoanAdvice, type SetupStep } from './v2/invest.ts';
+import type { AssortmentReview } from './v2/assortment.ts';
 import { marketingTable, type MarketingRow } from './v2/marketing.ts';
 import { md61Plan, type Md61Plan } from './v2/md61.ts';
 import { buildModel } from './v2/model.ts';
@@ -20,6 +21,7 @@ export type Snapshot = {
   md61: Md61Plan;
   vk32: Vk32Table;
   marketing: MarketingRow[];
+  assortment: { current: string[]; review: AssortmentReview | null };
   invest: { loan: LoanAdvice; setup: SetupStep[]; capacity: CapacityAdvice; avgMargin: number; changeoversPerRound: number };
   analysis: Analysis; // for Rozšířené
   errors: string[];
@@ -64,6 +66,7 @@ export function buildSnapshot(ds: Dataset, cfg: GameConfig, opts: SnapshotOption
     md61,
     vk32,
     marketing: marketingTable(m),
+    assortment: { current: m.assortment, review: m.review },
     invest: {
       loan: loanAdvice(cfg, { cash: m.cash, loan: m.loan, rawNextCycle: md61.materials.cost, remainingDays: m.remainingDays }),
       setup: setupMarginalTable(cfg, { currentSpend: m.setupSpend, changeoversPerRound: changeovers, marginPerUnit: margin, remainingRounds: m.remainingRounds }),

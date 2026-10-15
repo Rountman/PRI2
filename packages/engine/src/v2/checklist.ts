@@ -25,19 +25,19 @@ export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): Act
       id: 'start:1-sortiment',
       kind: 'checklist',
       priority: 'běžné',
-      title: `1. Sortiment: ${mats.join(', ')}`,
+      title: `1. Sortiment 1. kola: ${mats.join(', ')}`,
       tcode: 'Nastavení',
       steps: [
         ...skus.map((s) => `${m.mat(s)} ${skuLabel(s)} → DC ${allowedDcs(cfg, s).join(' + ')}`),
       ],
       copyValues: mats.map((s) => ({ label: 'Materiál', value: s })),
       why: {
-        summary: `Nejvyšší tržby na trhu v cvičné hře. ${skus.length} výrobků pokryje všechny 3 DC; každý další = 1 přestavba (${sh(m.setupHours)} h) na cyklus.`,
+        summary: cfg.assortmentAuto ? `V 1. kole plošně ${skus.length} výrobků – zjistíme, co trh kupuje. Po 1. kole appka sama nechá nejlepších ${cfg.assortmentTarget} (tržby trhu × naše marže).` : `Sortiment podle Nastavení (${skus.length} výrobků).`,
         data: [
           { label: '1 kg', value: 'DC 10 (jen 1 kg) + DC 12' },
           { label: '500 g', value: 'DC 12 + DC 14 (jen 500 g)' },
           { label: 'Přestavby', value: `${skus.length} setupy na cyklus × ${sh(m.setupHours)} h` },
-          { label: 'Kdy se přehodnotí', value: 'po prvním ZMARKET (den 5)' },
+          { label: 'Kdy se rozsekne', value: cfg.assortmentAuto ? `po 1. kole → top ${cfg.assortmentTarget}` : 'ručně v Nastavení' },
         ],
         rule: '4.1 Sortiment',
         risk: 'Odhad z dat Intro – preference zákazníků v Extended se ukážou až v ZMARKET.',

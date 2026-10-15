@@ -6,6 +6,7 @@ import { recentDemand, type StockPath } from '../analysis/stock.ts';
 import { latestFinance, profitToValuation } from '../finance/index.ts';
 import { isFinishedGood, SKUS, skuSize } from '../normalize.ts';
 import type { Dataset, FinanceSnapshot } from '../types.ts';
+import { assortmentReview, effectiveAssortment, type AssortmentReview } from './assortment.ts';
 
 const sum = (xs: number[]) => xs.reduce((a, x) => a + x, 0);
 
@@ -48,8 +49,8 @@ export type Demand = {
 };
 
 /** Demand without history: team's market per channel split over our assortment, converted by start price. */
-export function presetDemand(cfg: GameConfig, sku: string): Demand {
-  const pool = new Set([...cfg.assortment, sku]);
+export function presetDemand(cfg: GameConfig, sku: string, assortment: string[] = cfg.assortment): Demand {
+  const pool = new Set([...assortment, sku]);
   const byDc: Record<string, number> = {};
   for (const ch of cfg.channels) {
     if (!ch.sizes.includes(skuSize(sku))) continue;
@@ -64,9 +65,9 @@ export function presetDemand(cfg: GameConfig, sku: string): Demand {
  * dailyDemand = average sales over the last `demandWindow` days, counting only days the SKU was in stock.
  * Sold out on ≥ `stockoutBoostDays` of those days → × `stockoutBoost`. No history → preset.
  */
-export function dailyDemand(ds: Dataset, cfg: GameConfig, gameDay: number, path: StockPath, sku: string, daily = dailySales(ds)): Demand {
+export function dailyDemand(ds: Dataset, cfg: GameConfig, gameDay: number, path: StockPath, sku: string, daily = dailySales(ds), assortment: string[] = cfg.assortment): Demand {
   const m = daily.get(sku);
-  if (!m || ![...m.values()].some((v) => v.qty > 0)) return presetDemand(cfg, sku);
+  if (!m || ![...m.values()].some((v) => v.qty > 0)) return presetDemand(cfg, sku, assortment);
   const W = cfg.md61.demandWindow;
   let sold = 0;
   let inStock = 0;
@@ -92,7 +93,7 @@ export function dailyDemand(ds: Dataset, cfg: GameConfig, gameDay: number, path:
   const byDc: Record<string, number> = {};
   if (tot > 0) for (const r of rows) byDc[r.dc] = (byDc[r.dc] ?? 0) + (r.quantity / tot) * perDay;
   else {
-    const p = presetDemand(cfg, sku);
+    const p = presetDemand(cfg, sku, assortment);
     for (const [dc, v] of Object.entries(p.byDc)) byDc[dc] = (v / (p.perDay || 1)) * perDay;
   }
   return { sku, perDay, base, source: 'prodeje', inStockDays: inStock, stockoutDays: out, boosted, byDc };
@@ -124,6 +125,8 @@ export type Model = {
   cfg: GameConfig;
   a: Analysis;
   pregame: boolean;
+  assortment: string[]; // what we produce now (round 1: settings; later: review)
+  review: AssortmentReview | null;
   team: string;
   mat: (sku: string) => string; // SAP material number
   gameDay: number;
@@ -158,16 +161,18 @@ export function buildModel(ds: Dataset, cfg: GameConfig, a: Analysis): Model {
       const left = o.finish === null || o.finish > g ? o.target : Math.max(0, o.target - o.confirmed);
       if (left > 0) wip[o.material] = (wip[o.material] ?? 0) + left;
     }
+  const review = assortmentReview(ds, cfg, a);
+  const assortment = effectiveAssortment(cfg, review);
   const recentSold = new Set(ds.sales.filter((s) => s.gameDay > g - cfg.md61.demandWindow).map((s) => s.material));
   const skus = pregame
-    ? sapOrder(cfg.assortment)
-    : sapOrder([...cfg.assortment, ...Object.keys(stock).filter((s) => stock[s] > 0), ...recentSold, ...Object.keys(wip)].filter(isFinishedGood));
+    ? sapOrder(assortment)
+    : sapOrder([...assortment, ...Object.keys(stock).filter((s) => stock[s] > 0), ...recentSold, ...Object.keys(wip)].filter(isFinishedGood));
   const demand: Record<string, Demand> = {};
   const unitCost: Record<string, number> = {};
   const price: Record<string, number> = {};
   const margin: Record<string, number> = {};
   for (const sku of skus) {
-    demand[sku] = pregame ? presetDemand(cfg, sku) : dailyDemand(ds, cfg, g, a.stockPath, sku, daily);
+    demand[sku] = pregame ? presetDemand(cfg, sku, assortment) : dailyDemand(ds, cfg, g, a.stockPath, sku, daily, assortment);
     unitCost[sku] = a.costs[sku]?.cost ?? 0;
     const dcs = allowedDcs(cfg, sku);
     price[sku] = (!pregame && ourPrice(ds, sku, null, g, cfg.md61.demandWindow)) || round2(sum(dcs.map((dc) => startPrice(cfg, sku, dc))) / (dcs.length || 1));
@@ -190,6 +195,8 @@ export function buildModel(ds: Dataset, cfg: GameConfig, a: Analysis): Model {
     cfg,
     a,
     pregame,
+    assortment,
+    review,
     team,
     mat: (sku) => sapMaterial(team, sku),
     gameDay: g,

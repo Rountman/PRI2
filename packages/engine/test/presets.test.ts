@@ -32,8 +32,9 @@ describe('preset extended (CLAUDE.md kap. 2)', () => {
     expect(ext.recipes['2']).toEqual({ R06: 0.35, R05: 0.35, R02: 0.3 });
     expect(ext.rounds).toBe(5);
     expect(ext.defaultRating).toBe('A−');
-    expect(ext.assortment).toEqual(['F02', 'F03', 'F11', 'F12', 'F13']);
-    expect(ext.md61.firstCycleQty).toEqual({ '500g': 24_000, '1kg': 48_000 });
+    expect(ext.assortment).toEqual(['F01', 'F02', 'F03', 'F04', 'F11', 'F12', 'F13', 'F14']);
+    expect([ext.assortmentTarget, ext.assortmentAuto]).toEqual([5, true]);
+    expect(ext.md61.firstCycleQty).toEqual({ '500g': 16_000, '1kg': 24_000 });
   });
 
   it('snapshot', () => {

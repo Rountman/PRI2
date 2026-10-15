@@ -17,6 +17,7 @@ export type Md61Row = {
   planned: number;
   margin: number;
   cut: boolean; // reduced by the capacity check
+  dropped: boolean; // not in the current assortment → forecast 0, sell off the stock
 };
 
 export type Md61Plan = {
@@ -42,8 +43,10 @@ export function md61Plan(m: Model): Md61Plan {
     const stock = Math.max(0, m.stock[sku] ?? 0);
     const wip = m.wip[sku] ?? 0;
     const d = m.demand[sku];
+    const dropped = !m.assortment.includes(sku);
     let forecast: number;
-    if (m.pregame) forecast = cfg.md61.firstCycleQty[skuSize(sku)];
+    if (dropped) forecast = 0;
+    else if (m.pregame) forecast = cfg.md61.firstCycleQty[skuSize(sku)];
     else if (cfg.md61.mode === 'doplnění') forecast = roundUp(Math.max(0, d.perDay * horizon - stock - wip), 1000);
     else forecast = roundUp(d.perDay * horizon, 1000);
     const lots = lotsFor(m, forecast, stock, wip);
@@ -60,6 +63,7 @@ export function md61Plan(m: Model): Md61Plan {
       planned: lots.reduce((a, x) => a + x, 0),
       margin: m.margin[sku],
       cut: false,
+      dropped,
     };
   });
 

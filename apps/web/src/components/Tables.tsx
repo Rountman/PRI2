@@ -6,7 +6,8 @@ import { Badge, CopyValue, cx, Info, Panel, useSidePanel, Why } from './ui.tsx';
 const d1 = (x: number | null) => (x === null ? '∞' : fmtNum(x, 1));
 
 function md61Reason(r: Md61Row, horizon: number, pregame: boolean): string {
-  if (pregame) return 'Start: prázdný sklad → 1 kg plná dávka, 500 g poloviční (nižší marže).';
+  if (r.dropped) return 'Vyřazeno ze sortimentu – MD61 = 0, jen doprodat sklad.';
+  if (pregame) return 'Start: prázdný sklad → první dávka (1 kg větší, 500 g minimální).';
   if (r.cut && r.planned === 0) return 'Kapacita plná – nejnižší marže/ks, teď se nevyrábí.';
   if (r.planned === 0) return `Sklad + výroba pokryjí ${horizon} dní – nic nevyrábět.`;
   return `Poptávka × ${horizon} dní − sklad − výroba${r.cut ? ' (kráceno kapacitou)' : ''}.`;
@@ -81,7 +82,7 @@ export function Md61Table({ s }: { s: StateResponse }) {
         </thead>
         <tbody>
           {md.rows.map((r) => (
-            <tr key={r.sku} className={cx('border-t border-line/60', r.cut && 'text-amber-200')}>
+            <tr key={r.sku} className={cx('border-t border-line/60', r.cut && 'text-amber-200', r.dropped && 'text-mute line-through decoration-1')}>
               <td className="py-1.5" title={r.label}>
                 <CopyValue value={r.mat} className="font-bold" />
               </td>

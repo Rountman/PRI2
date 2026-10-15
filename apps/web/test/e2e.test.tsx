@@ -65,7 +65,7 @@ describe('e2e: one screen', () => {
     expect(getByTestId('cards').children).toHaveLength(7);
     expect(text).not.toMatch(/0 prodejů|bez prodejů|Nahraj [A-Z]/);
     expect(getByTestId('chips').textContent).toMatch(/⚪ Sklad.*⚪ Prodeje.*⚪ Trh/);
-    expect(getByTestId('md61').textContent).toMatch(/48\s000/);
+    expect(getByTestId('md61').textContent).toMatch(/24\s000/);
     expect(getByTestId('vk32').textContent).toContain('7,20');
   });
 

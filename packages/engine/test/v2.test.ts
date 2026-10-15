@@ -8,6 +8,7 @@ import { setupMarginalTable } from '../src/v2/invest.ts';
 import { cutLots } from '../src/v2/lotsize.ts';
 import { buildModel, dailyDemand } from '../src/v2/model.ts';
 import { clockOf } from '../src/phase.ts';
+import { assortmentReview } from '../src/v2/assortment.ts';
 import { cfg, fixtureDataset } from './helpers.ts';
 
 const ext = resolveConfig();
@@ -58,27 +59,31 @@ describe('Před hrou (no data)', () => {
     expect(text).not.toMatch(/0 prodejů|bez prodejů|Nahraj [A-Z]/);
   });
 
-  it('MD61 first cycle: 1 kg × 48 000, 500 g × 24 000, fits storage, cash and capacity', () => {
-    expect(s.md61.rows.map((r) => [r.sku, r.forecast, r.lots])).toEqual([
-      ['F02', 24_000, [24_000]],
-      ['F03', 24_000, [24_000]],
-      ['F11', 48_000, [48_000]],
-      ['F12', 48_000, [48_000]],
-      ['F13', 48_000, [48_000]],
+  it('MD61 first cycle broad: 8 SKUs, 1 kg × 24 000, 500 g × 16 000, fits storage, cash and capacity', () => {
+    expect(s.md61.rows.map((r) => [r.sku, r.forecast])).toEqual([
+      ['F01', 16_000],
+      ['F02', 16_000],
+      ['F03', 16_000],
+      ['F04', 16_000],
+      ['F11', 24_000],
+      ['F12', 24_000],
+      ['F13', 24_000],
+      ['F14', 24_000],
     ]);
-    expect(s.md61.materials.rawKg).toBe(168_000);
-    expect(s.md61.materials.packaging).toBe(384_000);
-    expect(s.md61.materials.cost).toBeGreaterThan(250_000);
+    expect(s.md61.materials.rawKg).toBe(128_000);
+    expect(s.md61.materials.packaging).toBe(320_000);
+    expect(s.md61.materials.cost).toBeGreaterThan(150_000);
     expect(s.md61.materials.cost).toBeLessThan(400_000);
     expect(s.md61.materials.ok).toBe(true);
-    expect(s.md61.capacity.units / s.md61.capacity.perDay).toBe(8);
-    expect(s.md61.capacity.setups).toBe(5);
+    expect(s.md61.capacity.units).toBe(160_000);
+    expect(s.md61.capacity.setups).toBe(8);
     expect(s.md61.capacity.used).toBeLessThanOrEqual(s.md61.capacity.available);
   });
 
   it('VK32 start prices only where the pack may be sold', () => {
     const cells = Object.fromEntries(s.vk32.rows.map((r) => [r.sku, Object.fromEntries(r.cells.map((c) => [c.dc, c.recommended]))]));
     expect(cells.F02).toEqual({ '12': 5.2, '14': 5.5 });
+    expect(s.cards.find((c) => c.id === 'start:3-vk32')!.copyValues).toHaveLength(16);
     expect(cells.F12).toEqual({ '10': 7.2, '12': 7.5 });
   });
 
@@ -97,15 +102,49 @@ describe('Před hrou (no data)', () => {
 describe('team code (SAP material GG-F01)', () => {
   it('preset GG → all SAP texts use GG-Fxx', () => {
     const s = buildSnapshot(emptyDataset(), ext);
-    expect(s.md61.rows.map((r) => r.mat)).toEqual(['GG-F02', 'GG-F03', 'GG-F11', 'GG-F12', 'GG-F13']);
-    expect(s.cards[0].title).toBe('1. Sortiment: GG-F02, GG-F03, GG-F11, GG-F12, GG-F13');
-    expect(s.cards.find((c) => c.id === 'start:5-md61')!.copyValues![0]).toEqual({ label: 'GG-F02', value: '24000' });
-    expect(s.vk32.rows[0].mat).toBe('GG-F02');
+    expect(s.md61.rows.map((r) => r.mat)).toEqual(['GG-F01', 'GG-F02', 'GG-F03', 'GG-F04', 'GG-F11', 'GG-F12', 'GG-F13', 'GG-F14']);
+    expect(s.cards[0].title).toBe('1. Sortiment 1. kola: GG-F01, GG-F02, GG-F03, GG-F04, GG-F11, GG-F12, GG-F13, GG-F14');
+    expect(s.cards.find((c) => c.id === 'start:5-md61')!.copyValues![0]).toEqual({ label: 'GG-F01', value: '16000' });
+    expect(s.vk32.rows[0].mat).toBe('GG-F01');
   });
 
   it('empty team code → detected from our reports', () => {
     const s = buildSnapshot(fixtureDataset(), resolveConfig({ preset: 'intro', teamCode: '' }));
     expect(s.md61.rows[0].mat).toMatch(/^GG-F\d\d$/);
+  });
+});
+
+describe('assortment: broad in round 1, best 5 after round 1', () => {
+  it('no review before a full round; review keeps 5 incl. both pack sizes', () => {
+    const ds = fixtureDataset();
+    expect(assortmentReview(ds, cfg, analyze(ds, cfg, { gameDay: 15 }))).toBeNull();
+    const rv = assortmentReview(ds, cfg, analyze(ds, cfg))!;
+    expect(rv.basis).toBe('ZMARKET');
+    expect(rv.keep).toHaveLength(5);
+    expect(rv.keep.some((s) => s.startsWith('F1'))).toBe(true);
+    expect(rv.keep.some((s) => s.startsWith('F0'))).toBe(true);
+    expect(rv.keep).toEqual(expect.arrayContaining(['F12', 'F13']));
+    expect([...rv.keep, ...rv.drop].sort()).toEqual([...cfg.assortmentPool].sort());
+  });
+
+  it('dropped SKUs get MD61 = 0 and no lots; card in Mezi koly lists MD61 = 0', () => {
+    const s = buildSnapshot(fixtureDataset(), cfg);
+    const rv = s.assortment.review!;
+    for (const r of s.md61.rows.filter((x) => rv.drop.includes(x.sku))) {
+      expect(r.dropped).toBe(true);
+      expect(r.forecast).toBe(0);
+      expect(r.lots).toEqual([]);
+    }
+    const card = buildSnapshot(fixtureDataset(), cfg, { clock: { gameDay: 20 } }).cards.find((c) => c.kind === 'sortiment')!;
+    expect(card.title).toMatch(/^Sortiment od kola 2/);
+    expect(card.priority).toBe('kritické');
+    expect(card.copyValues!.every((v) => v.value === '0')).toBe(true);
+  });
+
+  it('auto off → settings assortment stays', () => {
+    const s = buildSnapshot(fixtureDataset(), resolveConfig({ preset: 'intro', assortmentAuto: false }));
+    expect(s.assortment.current).toEqual(resolveConfig({ preset: 'intro' }).assortment);
+    expect(s.md61.rows.every((r) => !r.dropped)).toBe(true);
   });
 });
 
@@ -133,8 +172,8 @@ describe('demand (5.1)', () => {
   it('no history → preset (team market / start price)', () => {
     const d = dailyDemand(emptyDataset(), ext, 0, analyze(emptyDataset(), ext).stockPath, 'F12');
     expect(d.source).toBe('preset');
-    expect(d.byDc['10']).toBeCloseTo(90_000 / 5 / 3 / 7.2, 6); // 3 × 1 kg in DC 10
-    expect(d.byDc['12']).toBeCloseTo(220_000 / 5 / 5 / 7.5, 6); // all 5 in DC 12
+    expect(d.byDc['10']).toBeCloseTo(90_000 / 5 / 4 / 7.2, 6); // 4 × 1 kg in DC 10
+    expect(d.byDc['12']).toBeCloseTo(220_000 / 5 / 8 / 7.5, 6); // all 8 in DC 12
   });
 });
 
@@ -180,7 +219,7 @@ describe('fixtures (intro preset)', () => {
   });
 
   it('SKU cut to zero by capacity: no critical "MD61 = x" card, MD61 notes only on the cut SKU', () => {
-    const s = buildSnapshot(only(BASIC), cfg);
+    const s = buildSnapshot(only(BASIC), resolveConfig({ preset: 'intro', capacityPerDay: 12_000 }));
     const zero = s.md61.rows.filter((r) => r.planned === 0 && r.cut).map((r) => r.mat);
     expect(zero.length).toBeGreaterThan(0);
     for (const c of s.cards) {
