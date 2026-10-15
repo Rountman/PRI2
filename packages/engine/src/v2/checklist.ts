@@ -29,7 +29,6 @@ export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): Act
       tcode: 'Nastavení',
       steps: [
         ...skus.map((s) => `${m.mat(s)} ${skuLabel(s)} → DC ${allowedDcs(cfg, s).join(' + ')}`),
-        'Sortiment jde změnit v Rozšířené → Nastavení. Po prvním ZMARKET (den 5) ho appka přehodnotí.',
       ],
       copyValues: mats.map((s) => ({ label: 'Materiál', value: s })),
       why: {
@@ -38,6 +37,7 @@ export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): Act
           { label: '1 kg', value: 'DC 10 (jen 1 kg) + DC 12' },
           { label: '500 g', value: 'DC 12 + DC 14 (jen 500 g)' },
           { label: 'Přestavby', value: `${skus.length} setupy na cyklus × ${sh(m.setupHours)} h` },
+          { label: 'Kdy se přehodnotí', value: 'po prvním ZMARKET (den 5)' },
         ],
         rule: '4.1 Sortiment',
         risk: 'Odhad z dat Intro – preference zákazníků v Extended se ukážou až v ZMARKET.',
@@ -48,22 +48,21 @@ export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): Act
       id: 'start:2-recept',
       kind: 'checklist',
       priority: 'kritické',
-      title: '2. ZCS02 recept: ponech 35 / 35 / 30 – rozhodni TEĎ',
+      title: '2. ZCS02 recept: 35 / 35 / 30 – nech beze změny',
       tcode: 'ZCS02',
       deadline: 'před prvním MD01',
       steps: [
         ...skus.map((s) => `${m.mat(s)}: ${formatRecipe(cfg.recipes[skuFlavor(s)] ?? {})}`),
-        'Recept nejde změnit, když má produkt > 1 000 ks skladem nebo výrobní zakázky.',
-        'Levnější recept: Rozšířené → Recept (může snížit poptávku).',
       ],
       why: {
         summary: 'Po první výrobě je recept zamčený. Nevalidní BOM = produkt se neprodá.',
         data: [
           { label: 'Minima', value: `oat ≥ ${cfg.recipeMin.oats * 100} %, wheat ≥ ${cfg.recipeMin.wheat * 100} %, příchuť ≥ ${cfg.recipeMin.flavor * 100} %` },
           { label: 'Výchozí BOM 500 g', value: '0,175 / 0,175 / 0,150 kg' },
+          { label: 'Zámek', value: '> 1 000 ks skladem nebo výrobní zakázky → ZCS02 nejde' },
         ],
         rule: '4.1 Recept / guide kap. 5',
-        risk: 'Recept ovlivňuje atraktivitu produktu – levnější není automaticky lepší.',
+        risk: 'Levnější recept ušetří ~0,3 €/ks, ale snižuje atraktivitu produktu (guide kap. 5) – dopad na poptávku neznáme, proto beze změny.',
         confidence: 'jisté',
       },
     },
@@ -73,10 +72,10 @@ export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): Act
       priority: 'běžné',
       title: `3. VK32 startovní ceny (500 g ≈ ${fmtPrice(cfg.startPrices['500g'])}, 1 kg ≈ ${fmtPrice(cfg.startPrices['1kg'])})`,
       tcode: 'VK32',
-      steps: [...vk32.rows.flatMap((r) => r.cells.map((c) => `${r.mat} · DC ${c.dc} → ${fmtPrice(c.recommended)}`)), 'Ceny jen tam, kde se balení prodává (DC 10 jen 1 kg, DC 14 jen 500 g).'],
+      steps: [...vk32.rows.flatMap((r) => r.cells.map((c) => `${r.mat} · DC ${c.dc} → ${fmtPrice(c.recommended)}`))],
       copyValues: vk32.rows.flatMap((r) => r.cells.map((c) => ({ label: `${r.mat} DC${c.dc}`, value: sapValue(c.recommended) }))),
       why: {
-        summary: 'Bez ceny ve VK32 se v kanálu neprodá nic. DC 10 je velmi cenově citlivé (−0,30 €), DC 14 snese víc (+0,30 €).',
+        summary: 'Bez ceny ve VK32 se v kanálu neprodá nic. DC 10 je velmi cenově citlivé (−0,30 €), DC 14 snese víc (+0,30 €). DC 10 bere jen 1 kg, DC 14 jen 500 g.',
         data: cfg.channels.map((c) => ({ label: `DC ${c.dc} ${c.name}`, value: `cena ${c.priceSensitivity}, reklama ${c.marketingSensitivity}` })),
         rule: '4.1 Startovní ceny',
         risk: 'Odhad – po prvním ZMARKET (den 5) se ceny ukotví na trh.',
@@ -89,7 +88,7 @@ export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): Act
       priority: 'běžné',
       title: `4. ZFB50 setup reduction: ${fmtEUR(setupSpend)} → setup ${sh(setupTarget > 0 ? setup.find((s) => s.to === setupTarget)?.hoursTo ?? m.setupHours : m.setupHours)} h`,
       tcode: 'ZFB50',
-      steps: ['ZFB50: investice do setupu (účet 478000)', `Částka ${fmtEUR(setupSpend)}`, 'Simulace reaguje okamžitě, jde i před kolem 1.'],
+      steps: ['ZFB50: investice do setupu (účet 478000)', `Částka ${fmtEUR(setupSpend)}`],
       copyValues: [{ label: 'Částka', value: sapValue(setupSpend, 0) }],
       why: {
         summary: `Kratší setup = víc kusů při každé přestavbě. Vyplatí se kroky s návratností > ${cfg.investPayback}×.`,

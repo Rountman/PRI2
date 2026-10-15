@@ -19,7 +19,6 @@ const mrpSteps = (md: Md61Plan, rows: Md61Row[]) => [
   ...rows.map((r) => `MD61 ${r.mat} = ${fmtNum(r.forecast)} (→ planned ${r.lots.length ? r.lots.map((l) => fmtNum(l)).join(' + ') : '0'})`),
   'MD01: spusť MRP, zkontroluj, že planned orders sedí s tabulkou MD61.',
   'ME59N (Fixed Vendor prázdné) → po dodání surovin CO41.',
-  ...rows.filter((r) => r.cut).map((r) => `Kapacita: ${r.mat} kráceno (nejnižší marže/ks z plánu)`),
 ];
 
 /** 5.5 Alerts – critical cards. Each fires only when its inputs exist. */
@@ -47,25 +46,27 @@ export function alerts(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] {
         { label: 'Marže / ks', value: fmtPrice(r.margin) },
       ];
       if (r.planned <= 0) {
-        // capacity is full and this SKU has the lowest margin → it cannot be produced now; sell the rest dearer
+        // capacity is full and this SKU has the lowest margin → it is not produced now; sell the rest dearer
         const raise = vk.rows.find((x) => x.sku === r.sku)?.cells.filter((c) => c.action === 'zvýšit') ?? [];
-        out.push(
-          card(m, {
-            id: `alert:stock:${r.sku}:d${g}`,
-            kind: 'alert',
-            priority: 'běžné',
-            title: `${when} – kapacita plná${raise.length ? ` → zvedni cenu ${raise.map((c) => `DC ${c.dc} na ${fmtPrice(c.recommended)}`).join(', ')}` : ''}`,
-            profitEUR: raise.reduce((x, c) => x + (c.delta ?? 0) * c.demandPerDay * Math.min(lead, m.remainingDays), 0),
-            tcode: raise.length ? 'VK32' : 'MD61',
-            steps: [
-              `Kapacita na ${md.horizon} dní je plná – ${r.mat} má nejnižší marži/ks, proto se teď nevyrábí.`,
-              ...raise.map((c) => `VK32: ${r.mat}, DC ${c.dc}: ${fmtPrice(c.current)} → ${sapValue(c.recommended)}`),
-              'Zbytek skladu prodej dráž; do výroby se vrátí, až se uvolní kapacita (nebo zvaž +kapacitu v Rozšířené → Investice).',
-            ],
-            copyValues: raise.map((c) => ({ label: `${r.mat} DC${c.dc}`, value: sapValue(c.recommended) })),
-            why: { summary: 'Vyprodá se dřív, než by stihla výroba – ale kapacitu má lepší marže jinde.', data, rule: '5.2 kapacitní kontrola + 5.5', confidence: 'pravděpodobné' },
-          }),
-        );
+        if (raise.length)
+          out.push(
+            card(m, {
+              id: `alert:stock:${r.sku}:d${g}`,
+              kind: 'alert',
+              priority: 'běžné',
+              title: `Zvedni cenu ${r.mat} ${raise.map((c) => `v DC ${c.dc} na ${fmtPrice(c.recommended)}`).join(', ')}`,
+              profitEUR: raise.reduce((x, c) => x + (c.delta ?? 0) * c.demandPerDay * Math.min(lead, m.remainingDays), 0),
+              tcode: 'VK32',
+              steps: raise.map((c) => `VK32: ${r.mat}, DC ${c.dc}: ${fmtPrice(c.current)} → ${sapValue(c.recommended)}`),
+              copyValues: raise.map((c) => ({ label: `${r.mat} DC${c.dc}`, value: sapValue(c.recommended) })),
+              why: {
+                summary: `${when}, ale kapacita na ${md.horizon} dní je plná a ${r.mat} má nejnižší marži/ks – teď se nevyrábí. Zbytek skladu prodej dráž.`,
+                data,
+                rule: '5.2 kapacitní kontrola + 5.3',
+                confidence: 'pravděpodobné',
+              },
+            }),
+          );
         continue;
       }
       out.push(
@@ -239,6 +240,7 @@ export function roundCards(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] 
           data: [
             ...md.rows.map((r) => ({ label: r.mat, value: `poptávka ${fmtNum(r.demand.perDay)}/den · sklad ${fmtNum(r.stock)} · výroba ${fmtNum(r.wip)} → ${fmtNum(r.forecast)}` })),
             { label: 'Kapacita', value: `${fmtNum(md.capacity.used)} / ${fmtNum(md.capacity.available)} ks (${md.capacity.setups} setupy)` },
+            ...(md.capacity.cut.length ? [{ label: 'Kráceno kapacitou', value: md.rows.filter((r) => r.cut).map((r) => r.mat).join(', ') + ' (nejnižší marže/ks)' }] : []),
           ],
           rule: '5.2 MD61',
           risk: md.wipKnown ? '[OVĚŘIT] jak MD61 spotřebovává prognózu prodeji – po MD01 porovnej planned orders.' : 'Rozpracovaná výroba neznámá (ProductionReport v Rozšířeném) – počítá se 0.',
@@ -284,22 +286,6 @@ export function roundCards(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] 
 
   if (a.clock.phase === 'mezi-koly') {
     out.push(...investCards(m, md));
-    const locked = md.rows.filter((r) => r.stock > 1000 || r.wip > 0);
-    if (locked.length)
-      out.push({
-        id: `bom:locked:d${g}`,
-        kind: 'alert',
-        priority: 'běžné',
-        title: `Recept už nejde měnit u ${locked.map((r) => r.mat).join(', ')}`,
-        tcode: 'ZCS02',
-        steps: ['ZCS02 jde jen u SKU s ≤ 1 000 ks skladem a bez výrobních zakázek.', 'Nevalidní BOM = produkt se neprodá.'],
-        why: {
-          summary: 'Změnu receptu plánuj u SKU, které doprodáš, ještě před dalším MRP.',
-          data: locked.map((r) => ({ label: r.mat, value: `sklad ${fmtNum(r.stock)} · výroba ${fmtNum(r.wip)}` })),
-          rule: '5.5 BOM zamčený',
-          confidence: 'jisté',
-        },
-      });
   }
   return out;
 }

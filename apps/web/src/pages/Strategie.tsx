@@ -3,10 +3,20 @@ import { Panel } from '../components/ui.tsx';
 
 const SECTIONS: { title: string; items: string[] }[] = [
   {
+    title: 'Role v týmu GG',
+    items: [
+      '1 · Suroviny a MRP: MD61 → MD01 → ME59N. Hlídá tabulku MD61 a karty „dojde za X dne“. Nahrává ZMB52.',
+      '2 · Výroba: CO41 po dodání surovin, ZCS02. Hlídá kartu MRP cyklu. Zástup za #1.',
+      '3 · Ceny: VK32 pro DC 10/12/14. Hlídá tabulku VK32. Nahrává ZVA05 + ZMARKET (den 5/10/15/20).',
+      '4 · Kapitán: ZADS, ZFB50, ruční finance, karty investic mezi koly. Zástup za #3.',
+      'Appka rozhoduje – kdo má kartu, naťuká ji a dá ✓. Důvod je pod (?).',
+    ],
+  },
+  {
     title: 'Před hrou',
     items: [
       'Sortiment (default F02, F03, F12, F13) – pokryje DC 10/12/14 se 4 SKU.',
-      'ZCS02 recept rozhodnout TEĎ – po první výrobě je zamčený.',
+      'ZCS02 recept nech 35 / 35 / 30 – po první výrobě je zamčený.',
       'VK32 startovní ceny jen tam, kde se balení smí prodávat.',
       'ZFB50 setup reduction podle marginální tabulky (návratnost > 2×).',
       'MD61 1. cyklus = 1 max dávka / SKU → MD01 → ME59N (Fixed Vendor prázdné) → CO41.',

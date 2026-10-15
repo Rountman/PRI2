@@ -1,9 +1,16 @@
 import type { Md61Row, Vk32Cell, Vk32Row } from '@copilot/engine';
 import { fmtEUR, fmtNum, fmtPrice, sapValue } from '@copilot/engine/format';
 import type { StateResponse } from '../api.ts';
-import { Badge, CopyValue, cx, Info, Panel, useSidePanel } from './ui.tsx';
+import { Badge, CopyValue, cx, Info, Panel, useSidePanel, Why } from './ui.tsx';
 
 const d1 = (x: number | null) => (x === null ? '∞' : fmtNum(x, 1));
+
+function md61Reason(r: Md61Row, horizon: number, pregame: boolean): string {
+  if (pregame) return 'Start: prázdný sklad → 1 maximální dávka.';
+  if (r.cut && r.planned === 0) return 'Kapacita plná – nejnižší marže/ks, teď se nevyrábí.';
+  if (r.planned === 0) return `Sklad + výroba pokryjí ${horizon} dní – nic nevyrábět.`;
+  return `Poptávka × ${horizon} dní − sklad − výroba${r.cut ? ' (kráceno kapacitou)' : ''}.`;
+}
 
 function Md61Why({ r, s }: { r: Md61Row; s: StateResponse }) {
   const md = s.snapshot.md61;
@@ -85,9 +92,16 @@ export function Md61Table({ s }: { s: StateResponse }) {
               </td>
               <td className="pl-3 text-base text-mute">{r.lots.length ? r.lots.map((l) => `${fmtNum(l / 1000)}k`).join(' + ') : '—'}</td>
               <td className="text-right">
-                <button onClick={() => open({ title: `MD61 ${r.mat}`, body: <Md61Why r={r} s={s} /> })} className="h-7 w-7 rounded-full border border-line text-xs font-bold text-mute hover:border-accent hover:text-accent" title="Proč?">
-                  ?
-                </button>
+                <Why
+                  hover={
+                    <span className="block space-y-1">
+                      <span className="block font-semibold">{md61Reason(r, md.horizon, md.pregame)}</span>
+                      <span className="block text-mute">poptávka {fmtNum(r.demand.perDay)}/den · sklad {fmtNum(r.stock)} · výroba {md.wipKnown ? fmtNum(r.wip) : '?'} · marže {fmtPrice(r.margin)}</span>
+                    </span>
+                  }
+                  onOpen={() => open({ title: `MD61 ${r.mat}`, body: <Md61Why r={r} s={s} /> })}
+                  className="h-7 w-7 rounded-full border border-line text-xs"
+                />
               </td>
             </tr>
           ))}
@@ -151,7 +165,7 @@ export function Vk32Table({ s }: { s: StateResponse }) {
       right={
         <Info title="VK32 per DC">
           <p>Ceny zadej ve VK32 pro každé DC zvlášť. DC 10 bere jen 1 kg, DC 14 jen 500 g – nepovolené buňky se neukazují.</p>
-          <p>↑ zvednout, ↓ snížit, • nastavit (zatím bez prodejů). Klik na cenu = kopírovat.</p>
+          <p>↑ zvednout, ↓ snížit, • nastavit (nová cena v DC). Klik na cenu = kopírovat.</p>
         </Info>
       }
     >
@@ -180,9 +194,22 @@ export function Vk32Table({ s }: { s: StateResponse }) {
                   <td key={dc} className="text-right">
                     <span className="inline-flex items-center gap-1">
                       <CopyValue value={sapValue(c.recommended)} display={fmtNum(c.recommended, 2)} className={cx('text-lg', c.action === 'zvýšit' && 'border-good/50', c.action === 'snížit' && 'border-high/50', c.warnFixed && 'text-amber-200')} />
-                      <button onClick={() => open({ title: `VK32 ${r.mat} · DC ${dc}`, body: <Vk32Why r={r} c={c} /> })} className="w-5 text-left font-bold text-mute hover:text-accent" title="Proč?">
-                        {ARROW[c.action] || '?'}
-                      </button>
+                      <Why
+                        label={ARROW[c.action] || '?'}
+                        hover={
+                          <span className="block space-y-1">
+                            <span className="block font-semibold">
+                              {c.action === 'držet' ? 'Beze změny' : `${fmtPrice(c.current)} → ${fmtPrice(c.recommended)}`}: {c.reason}
+                            </span>
+                            <span className="block text-mute">
+                              kotva trhu {fmtPrice(r.anchor)} · unit cost {fmtPrice(r.unitCost)} · pokrytí {d1(r.coverDays)} dne
+                            </span>
+                            {c.warnFixed && <span className="block text-amber-200">⚠ pod unit cost + fixní náklady/ks</span>}
+                          </span>
+                        }
+                        onOpen={() => open({ title: `VK32 ${r.mat} · DC ${dc}`, body: <Vk32Why r={r} c={c} /> })}
+                        className="w-5 text-left"
+                      />
                     </span>
                   </td>
                 );

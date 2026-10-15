@@ -1,7 +1,7 @@
 import type { ActionCard as Card } from '@copilot/engine';
 import { fmtEUR, fmtShort } from '@copilot/engine/format';
 import { api } from '../api.ts';
-import { Badge, CopyValue, cx, useSidePanel } from './ui.tsx';
+import { Badge, CopyValue, cx, useSidePanel, Why } from './ui.tsx';
 
 const PRIO = {
   kritické: { border: 'border-l-crit', tone: 'crit' as const },
@@ -60,6 +60,25 @@ export function WhyBody({ card }: { card: Card }) {
   );
 }
 
+/** Short reason shown on hover over (?). */
+export function WhyHover({ card }: { card: Card }) {
+  return (
+    <span className="block space-y-2">
+      <span className="block font-semibold">{card.why.summary}</span>
+      {card.why.data.slice(0, 4).map((d, i) => (
+        <span key={i} className="flex justify-between gap-3 text-mute">
+          <span>{d.label}</span>
+          <span className="num text-right text-ink">{d.value}</span>
+        </span>
+      ))}
+      {card.why.risk && <span className="block text-amber-200">Riziko: {card.why.risk}</span>}
+      <span className="block text-xs text-mute">
+        {card.why.rule} · jistota: {card.why.confidence} · klik = detail
+      </span>
+    </span>
+  );
+}
+
 export function ActionCard({ card, compact = false }: { card: Card; compact?: boolean }) {
   const { open } = useSidePanel();
   const p = PRIO[card.priority];
@@ -74,7 +93,6 @@ export function ActionCard({ card, compact = false }: { card: Card; compact?: bo
             {card.deadline && <span className="text-sm text-high">⏱ {card.deadline}</span>}
           </div>
           <h3 className={cx('font-bold leading-snug', compact ? 'text-lg' : 'text-xl', card.done && 'line-through')}>{card.title}</h3>
-          {!card.done && <p className="mt-1 text-mute">{card.why.summary}</p>}
           {!compact && !card.done && (
             <ol className="mt-2 list-decimal space-y-0.5 pl-5 text-[0.95rem]">
               {card.steps.slice(0, 10).map((s, i) => (
@@ -99,9 +117,7 @@ export function ActionCard({ card, compact = false }: { card: Card; compact?: bo
             </div>
           )}
           <div className="flex gap-2">
-            <button onClick={showWhy} className="h-10 w-10 rounded-lg border border-line text-lg font-bold text-mute hover:border-accent hover:text-accent" title="Proč?">
-              ?
-            </button>
+            <Why hover={<WhyHover card={card} />} onOpen={showWhy} className="h-10 w-10 rounded-lg border border-line text-lg" />
             <button
               onClick={() => void api.setDone(card.id, !card.done)}
               className={cx('h-10 rounded-lg border px-3 font-semibold', card.done ? 'border-line text-mute' : 'border-good/50 text-good hover:bg-good/10')}
