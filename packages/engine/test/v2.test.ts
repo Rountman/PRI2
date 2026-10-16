@@ -244,6 +244,34 @@ describe('demand (5.1)', () => {
   });
 });
 
+describe('team demand cap (SKUs share the same customers)', () => {
+  // real game GG round 1: one 500 g SKU on the shelf at a time, each sells ~13k/day, but the team sells ~13k/day in total
+  const sale = (gameDay: number, material: string, quantity: number) => ({
+    round: 1, day: gameDay, gameDay, area: 'N', location: '02', dc: '12', material, teamCode: 'GG', description: '', netPrice: 5.2, quantity, netValue: quantity * 5.2, cost: quantity * 1.5,
+  });
+  const ds = { ...emptyDataset(), sales: [sale(1, 'F01', 13_000), sale(2, 'F02', 13_000), sale(3, 'F03', 13_000), sale(4, 'F04', 13_000), sale(5, 'F01', 13_000)] } as Dataset;
+  const c = resolveConfig({ assortment: ['F01', 'F02', 'F03', 'F04'], assortmentAuto: false });
+
+  it('Σ per-SKU demand is scaled to the team total × boost', () => {
+    const m = buildModel(ds, c, analyze(ds, c));
+    expect(m.teamDemand?.perDay).toBe(13_000);
+    const total = ['F01', 'F02', 'F03', 'F04'].reduce((a, s) => a + m.demand[s].perDay, 0);
+    expect(total).toBeCloseTo(13_000 * c.md61.stockoutBoost, 6);
+    expect(m.demand.F01.capFactor).toBeLessThan(1);
+    // MD61 for 10 days ≈ team total, not 4 × 13k
+    const s = buildSnapshot(ds, c);
+    expect(s.md61.rows.reduce((a, r) => a + r.forecast, 0)).toBeLessThanOrEqual(13_000 * 1.2 * s.md61.horizon + 4 * 1000);
+  });
+
+  it('small raw storage cuts the plan (lowest margin first) instead of only warning', () => {
+    const tiny = resolveConfig({ assortment: ['F01', 'F02', 'F03', 'F04'], assortmentAuto: false, storage: { finishedGoods: 250_000, raw: 30_000, packaging: 750_000 } });
+    const s = buildSnapshot(ds, tiny);
+    expect(s.md61.materials.cut.length).toBeGreaterThan(0);
+    expect(s.md61.materials.rawPeak).toBeLessThanOrEqual(30_000);
+    expect(s.md61.materials.ok).toBe(true);
+  });
+});
+
 function check(ds: Dataset) {
   const s = buildSnapshot(ds, cfg);
   expect(s.errors).toEqual([]);
@@ -257,6 +285,9 @@ function check(ds: Dataset) {
     expect(r.lots).toEqual(cutLots(r.forecast - r.stock - r.wip, cfg));
     expect(r.forecast % 1000).toBe(0);
   }
+  // raw/packaging storage after ME59N deliveries never over the limit
+  expect(s.md61.materials.rawPeak).toBeLessThanOrEqual(cfg.storage.raw);
+  expect(s.md61.materials.packagingPeak).toBeLessThanOrEqual(cfg.storage.packaging);
   // prices never below unit cost
   for (const r of s.vk32.rows) for (const c of r.cells) expect(c.recommended).toBeGreaterThanOrEqual(r.unitCost);
   // max 5 cards, max 2 critical

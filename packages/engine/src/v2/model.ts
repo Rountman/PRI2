@@ -45,6 +45,7 @@ export type Demand = {
   inStockDays: number;
   stockoutDays: number;
   boosted: boolean;
+  capFactor: number; // < 1 when scaled down to the team's total daily sales (SKUs compete for the same customers)
   byDc: Record<string, number>; // units/day per DC
 };
 
@@ -58,7 +59,7 @@ export function presetDemand(cfg: GameConfig, sku: string, assortment: string[] 
     byDc[ch.dc] = ch.marketPer5DaysPerTeam / 5 / n / startPrice(cfg, sku, ch.dc);
   }
   const perDay = sum(Object.values(byDc));
-  return { sku, perDay, base: perDay, source: 'preset', inStockDays: 0, stockoutDays: 0, boosted: false, byDc };
+  return { sku, perDay, base: perDay, source: 'preset', inStockDays: 0, stockoutDays: 0, boosted: false, capFactor: 1, byDc };
 }
 
 /**
@@ -96,7 +97,7 @@ export function dailyDemand(ds: Dataset, cfg: GameConfig, gameDay: number, path:
     const p = presetDemand(cfg, sku, assortment);
     for (const [dc, v] of Object.entries(p.byDc)) byDc[dc] = (v / (p.perDay || 1)) * perDay;
   }
-  return { sku, perDay, base, source: 'prodeje', inStockDays: inStock, stockoutDays: out, boosted, byDc };
+  return { sku, perDay, base, source: 'prodeje', inStockDays: inStock, stockoutDays: out, boosted, capFactor: 1, byDc };
 }
 
 /** Our average price of a SKU in a DC over the last `window` days with sales. */
@@ -117,6 +118,30 @@ export function marketAnchor(ds: Dataset, sku: string): { price: number; gameDay
   const w = rows.filter((r) => r.gameDay === last);
   const q = sum(w.map((r) => r.quantity));
   return q ? { price: round2(sum(w.map((r) => r.value)) / q), gameDay: last } : null;
+}
+
+/**
+ * Team cap: our total sales per day (all SKUs) on days we sold anything, × stock-out boost when any SKU ran out.
+ * Per-SKU in-stock averages overstate demand when only one SKU is on the shelf at a time (it takes the customers
+ * of the sold-out ones), so Σ per-SKU demand of the assortment is scaled down to this cap.
+ */
+export type TeamDemand = { perDay: number; cap: number; days: number; sumSkus: number; factor: number };
+
+export function teamDemand(cfg: GameConfig, gameDay: number, daily: ReturnType<typeof dailySales>, demand: Record<string, Demand>, assortment: string[]): TeamDemand | null {
+  const W = cfg.md61.demandWindow;
+  const totals: number[] = [];
+  for (let g = Math.max(1, gameDay - W + 1); g <= gameDay; g++) {
+    let t = 0;
+    for (const m of daily.values()) t += m.get(g)?.qty ?? 0;
+    if (t > 0) totals.push(t);
+  }
+  if (!totals.length) return null;
+  const perDay = sum(totals) / totals.length;
+  const inAssort = assortment.filter((s) => demand[s]);
+  const boosted = inAssort.some((s) => demand[s].boosted);
+  const cap = perDay * (boosted ? cfg.md61.stockoutBoost : 1);
+  const sumSkus = sum(inAssort.map((s) => demand[s].perDay));
+  return { perDay, cap, days: totals.length, sumSkus, factor: sumSkus > cap ? cap / sumSkus : 1 };
 }
 
 // ---------- model ----------
@@ -146,7 +171,8 @@ export type Model = {
   loan: number;
   remainingDays: number;
   remainingRounds: number;
-  rawStock: { kg: number; packaging: number };
+  rawStock: { kg: number; packaging: number; byMaterial: Record<string, number> };
+  teamDemand: TeamDemand | null;
   toValuation: (profit: number) => number;
 };
 
@@ -178,15 +204,25 @@ export function buildModel(ds: Dataset, cfg: GameConfig, a: Analysis): Model {
     price[sku] = (!pregame && ourPrice(ds, sku, null, g, cfg.md61.demandWindow)) || round2(sum(dcs.map((dc) => startPrice(cfg, sku, dc))) / (dcs.length || 1));
     margin[sku] = round2(price[sku] - unitCost[sku]);
   }
+  const team_ = pregame ? null : teamDemand(cfg, g, daily, demand, assortment);
+  if (team_ && team_.factor < 1)
+    for (const sku of skus) {
+      const d = demand[sku];
+      if (d.source !== 'prodeje') continue;
+      const f = team_.factor;
+      demand[sku] = { ...d, perDay: d.perDay * f, capFactor: f, byDc: Object.fromEntries(Object.entries(d.byDc).map(([k, v]) => [k, v * f])) };
+    }
   const finance = latestFinance(ds);
   const team = teamOf(cfg, ds);
   const setupSpend = Math.max(cfg.setup.spend, finance?.setupSpend ?? 0);
   const remainingDays = a.clock.daysLeftInGame;
   let kg = 0;
   let packaging = 0;
+  const byMaterial: Record<string, number> = {};
   if (!pregame)
     for (const r of ds.inventory) {
       if (isFinishedGood(r.material)) continue;
+      byMaterial[r.material] = (byMaterial[r.material] ?? 0) + r.stock;
       if (/^P/.test(r.material)) packaging += r.stock;
       else kg += r.stock;
     }
@@ -216,7 +252,8 @@ export function buildModel(ds: Dataset, cfg: GameConfig, a: Analysis): Model {
     loan: finance?.loan ?? cfg.initial.loan,
     remainingDays,
     remainingRounds: remainingDays / cfg.roundLength,
-    rawStock: { kg, packaging },
+    rawStock: { kg, packaging, byMaterial },
+    teamDemand: team_,
     toValuation: (p) => profitToValuation(p, cfg, a.discount.rate),
   };
 }

@@ -131,8 +131,8 @@ export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): Act
       why: {
         summary: 'Sklad je na startu prázdný – bez prognózy MRP nic nenaplánuje a bez zásob se nic neprodá.',
         data: [
-          { label: 'Suroviny', value: `${fmtNum(mat.rawKg)} kg (limit ${fmtNum(cfg.storage.raw)}) ${mat.rawKg <= mat.rawLimit ? '✓' : '✗'}` },
-          { label: 'Obaly', value: `${fmtNum(mat.packaging)} ks (limit ${fmtNum(cfg.storage.packaging)}) ${mat.packaging <= mat.packagingLimit ? '✓' : '✗'}` },
+          { label: 'Suroviny', value: `${fmtNum(mat.rawKg)} kg (limit ${fmtNum(cfg.storage.raw)}) ${mat.rawPeak <= mat.rawLimit ? '✓' : '✗'}` },
+          { label: 'Obaly', value: `${fmtNum(mat.packaging)} ks (limit ${fmtNum(cfg.storage.packaging)}) ${mat.packagingPeak <= mat.packagingLimit ? '✓' : '✗'}` },
           { label: 'Náklad na suroviny', value: `${fmtEUR(mat.cost)} (cash ${fmtEUR(mat.cash)}) ${mat.cash === null || mat.cost <= mat.cash ? '✓' : '✗'}` },
           { label: 'Lot size', value: `${fmtNum(cfg.lotMin)}–${fmtNum(cfg.lotMax)}` },
         ],

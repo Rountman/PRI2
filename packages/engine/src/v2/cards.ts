@@ -247,7 +247,12 @@ export function roundCards(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] 
           data: [
             ...md.rows.map((r) => ({ label: r.mat, value: `poptávka ${fmtNum(r.demand.perDay)}/den · sklad ${fmtNum(r.stock)} · výroba ${fmtNum(r.wip)} → ${fmtNum(r.forecast)}` })),
             { label: 'Kapacita', value: `${fmtNum(md.capacity.used)} / ${fmtNum(md.capacity.available)} ks (${md.capacity.setups} setupy)` },
-            ...(md.capacity.cut.length ? [{ label: 'Kráceno kapacitou', value: md.rows.filter((r) => r.cut).map((r) => r.mat).join(', ') + ' (nejnižší marže/ks)' }] : []),
+            ...(m.teamDemand && m.teamDemand.factor < 1
+              ? [{ label: 'Strop týmu', value: `celkem prodáváme ${fmtNum(m.teamDemand.perDay)} ks/den → součet výrobků stažen na ${fmtNum(m.teamDemand.cap)} ks/den (×${fmtNum(m.teamDemand.factor, 2)})` }]
+              : []),
+            ...(md.capacity.cut.length ? [{ label: 'Kráceno kapacitou', value: md.capacity.cut.map(m.mat).join(', ') + ' (nejnižší marže/ks)' }] : []),
+            { label: 'Sklad surovin po nákupu', value: `${fmtNum(md.materials.rawPeak)} / ${fmtNum(md.materials.rawLimit)} kg · obaly ${fmtNum(md.materials.packagingPeak)} / ${fmtNum(md.materials.packagingLimit)} ks` },
+            ...(md.materials.cut.length ? [{ label: 'Kráceno skladem', value: md.materials.cut.map(m.mat).join(', ') + ' – jinak poplatky za přesah skladu' }] : []),
           ],
           rule: '5.2 MD61',
           risk: md.wipKnown ? '[OVĚŘIT] jak MD61 spotřebovává prognózu prodeji – po MD01 porovnej planned orders.' : 'Rozpracovaná výroba neznámá (ProductionReport v Rozšířeném) – počítá se 0.',
