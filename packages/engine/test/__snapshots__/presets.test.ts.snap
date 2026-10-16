@@ -85,7 +85,7 @@ exports[`preset extended (CLAUDE.md kap. 2) > snapshot 1`] = `
   "investPayback": 2,
   "lotMax": 48000,
   "lotMin": 16000,
-  "lotRounding": 1000,
+  "lotRounding": 16000,
   "marketingEurPerRegionDay": 1000,
   "maxCards": 12,
   "maxCritical": 2,
@@ -93,7 +93,7 @@ exports[`preset extended (CLAUDE.md kap. 2) > snapshot 1`] = `
     "changeoversPerRound": 10,
     "demandWindow": 5,
     "firstCycleQty": {
-      "1kg": 24000,
+      "1kg": 16000,
       "500g": 16000,
     },
     "leadTimeMax": 5,

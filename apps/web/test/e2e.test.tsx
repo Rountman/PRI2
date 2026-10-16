@@ -74,7 +74,7 @@ describe('e2e: one screen', () => {
     expect(container.querySelector('[data-testid=channels]')).toBeNull();
     expect(text).not.toMatch(/0 prodejů|bez prodejů|Nahraj [A-Z]/);
     expect(getByTestId('chips').textContent).toMatch(/⚪ Sklad.*⚪ Prodeje.*⚪ Trh/);
-    expect(getByTestId('md61').textContent).toMatch(/24\s000/);
+    expect(getByTestId('md61').textContent).toMatch(/16\s000/);
     expect(getByTestId('vk32').textContent).toContain('7,20');
   });
 

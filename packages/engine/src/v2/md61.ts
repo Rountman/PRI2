@@ -1,7 +1,7 @@
 // 5.2 MD61 forecast recommendation (main output of the app).
 import { bomFor, unitCostFromBom } from '../bom.ts';
 import { skuKg, skuLabel, skuSize } from '../normalize.ts';
-import { cutLots, roundDown, roundUp } from './lotsize.ts';
+import { cutLots, fitLots, roundDown, roundUp } from './lotsize.ts';
 import type { Demand, Model } from './model.ts';
 
 export type Md61Row = {
@@ -51,6 +51,9 @@ export function md61Plan(m: Model): Md61Plan {
     else if (cfg.md61.mode === 'doplnění') forecast = roundUp(Math.max(0, d.perDay * horizon - stock - wip), 1000);
     else forecast = roundUp(d.perDay * horizon, 1000);
     const lots = lotsFor(m, forecast, stock, wip);
+    // MD61 value that yields exactly these lots after MD01 (forecast − stock − WIP just below Σ lots)
+    const sumLots = lots.reduce((a, x) => a + x, 0);
+    if (sumLots > 0) forecast = cfg.md61.mode === 'doplnění' ? sumLots : roundDown(stock + wip, 1000) + sumLots;
     return {
       sku,
       mat: m.mat(sku),
@@ -77,10 +80,9 @@ export function md61Plan(m: Model): Md61Plan {
   };
   const available = perDay * horizon;
   const setPlanned = (r: Md61Row, target: number) => {
-    if (target < cfg.lotMin) target = 0;
-    r.forecast = cfg.md61.mode === 'doplnění' ? target : Math.max(0, roundDown(target + r.stock + r.wip, 1000));
-    r.lots = lotsFor(m, r.forecast, r.stock, r.wip);
+    r.lots = fitLots(target, cfg);
     r.planned = r.lots.reduce((a, x) => a + x, 0);
+    r.forecast = cfg.md61.mode === 'doplnění' ? r.planned : r.planned > 0 ? roundDown(r.stock + r.wip, 1000) + r.planned : 0;
     r.cut = true;
   };
   const cutSkus: string[] = [];
@@ -90,7 +92,7 @@ export function md61Plan(m: Model): Md61Plan {
       const over = u.units + u.setupUnits - available;
       if (over <= 0) break;
       if (r.planned <= 0) continue;
-      setPlanned(r, roundDown(r.planned - over, 1000));
+      setPlanned(r, r.planned - over);
       cutSkus.push(r.sku);
     }
   }
@@ -118,7 +120,7 @@ export function md61Plan(m: Model): Md61Plan {
     if (overKg <= 0 && overPk <= 0) break;
     if (r.planned <= 0) continue;
     const units = Math.max(overKg > 0 ? overKg / skuKg(r.sku) : 0, overPk > 0 ? overPk / 2 : 0);
-    setPlanned(r, roundDown(r.planned - Math.ceil(units), 1000));
+    setPlanned(r, r.planned - Math.ceil(units));
     storeCut.push(r.sku);
   }
   const st = store();

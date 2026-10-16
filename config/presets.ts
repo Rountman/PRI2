@@ -42,7 +42,7 @@ const EXTENDED: GameConfig = {
   setupSteps: [50_000, 125_000, 250_000, 500_000, 1_250_000],
   lotMin: 16_000,
   lotMax: 48_000,
-  lotRounding: 1_000,
+  lotRounding: 16_000, // ostrá hra: výroba jen po 16 000 / 48 000 ks
   fixedCosts: { periodDays: 5, labor: 20_000, overhead: 15_000, sga: 40_000, depBuilding: 1_250, depMachines: 50_000 },
   depreciationPerDayPerM: 10_000 / 24, // 50 000 / 5 days / €24M
   interestPerDayPerM: 2_644.8 / 8,
@@ -58,7 +58,7 @@ const EXTENDED: GameConfig = {
   startPrices: { '500g': 5.2, '1kg': 7.5, dcAdjust: { '10': -0.3, '12': 0, '14': 0.3 }, overrides: {} }, // [ODHAD]
   setupProposal: 125_000, // [ODHAD]
   md61: {
-    firstCycleQty: { '500g': 16_000, '1kg': 24_000 }, // 8 SKUs + 8 setups must fit 10 days of capacity; 1 kg sells better
+    firstCycleQty: { '500g': 16_000, '1kg': 16_000 }, // one 16k pack per SKU (production only in 16k / 48k packs)
     nextMrpDays: 5,
     leadTimeMax: 5,
     stockoutBoost: 1.2,

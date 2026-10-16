@@ -5,7 +5,7 @@ import { buildSnapshot } from '../src/engine.ts';
 import { emptyDataset, type ActionCard, type Dataset } from '../src/types.ts';
 import { selectCards } from '../src/v2/cards.ts';
 import { loanAdvice, setupMarginalTable } from '../src/v2/invest.ts';
-import { cutLots } from '../src/v2/lotsize.ts';
+import { cutLots, fitLots } from '../src/v2/lotsize.ts';
 import { buildModel, dailyDemand } from '../src/v2/model.ts';
 import { clockOf } from '../src/phase.ts';
 import { assortmentReview } from '../src/v2/assortment.ts';
@@ -39,7 +39,26 @@ describe('lot size (guide table)', () => {
     [0, []],
     [-5, []],
     [100_000, [48_000, 48_000, 16_000]],
+  ])('%d → %j', (q, lots) => expect(cutLots(q, { ...ext, lotRounding: 1_000 })).toEqual(lots));
+});
+
+describe('lot size in packs of 16 000 / 48 000 (live game, preset extended)', () => {
+  it.each([
+    [1, [16_000]],
+    [16_000, [16_000]],
+    [16_001, [16_000, 16_000]],
+    [32_000, [16_000, 16_000]],
+    [40_000, [48_000]],
+    [48_001, [48_000, 16_000]],
+    [100_000, [48_000, 48_000, 16_000]],
+    [0, []],
   ])('%d → %j', (q, lots) => expect(cutLots(q, ext)).toEqual(lots));
+
+  it('fitLots rounds down to packs (capacity / storage cuts)', () => {
+    expect(fitLots(15_999, ext)).toEqual([]);
+    expect(fitLots(47_999, ext)).toEqual([16_000, 16_000]);
+    expect(fitLots(70_000, ext)).toEqual([48_000, 16_000]);
+  });
 });
 
 describe('Před hrou (no data)', () => {
@@ -59,23 +78,23 @@ describe('Před hrou (no data)', () => {
     expect(text).not.toMatch(/0 prodejů|bez prodejů|Nahraj [A-Z]/);
   });
 
-  it('MD61 first cycle broad: 8 SKUs, 1 kg × 24 000, 500 g × 16 000, fits storage, cash and capacity', () => {
+  it('MD61 first cycle broad: 8 SKUs × one 16 000 pack, fits storage, cash and capacity', () => {
     expect(s.md61.rows.map((r) => [r.sku, r.forecast])).toEqual([
       ['F01', 16_000],
       ['F02', 16_000],
       ['F03', 16_000],
       ['F04', 16_000],
-      ['F11', 24_000],
-      ['F12', 24_000],
-      ['F13', 24_000],
-      ['F14', 24_000],
+      ['F11', 16_000],
+      ['F12', 16_000],
+      ['F13', 16_000],
+      ['F14', 16_000],
     ]);
-    expect(s.md61.materials.rawKg).toBe(128_000);
-    expect(s.md61.materials.packaging).toBe(320_000);
+    expect(s.md61.materials.rawKg).toBe(96_000);
+    expect(s.md61.materials.packaging).toBe(256_000);
     expect(s.md61.materials.cost).toBeGreaterThan(150_000);
     expect(s.md61.materials.cost).toBeLessThan(400_000);
     expect(s.md61.materials.ok).toBe(true);
-    expect(s.md61.capacity.units).toBe(160_000);
+    expect(s.md61.capacity.units).toBe(128_000);
     expect(s.md61.capacity.setups).toBe(8);
     expect(s.md61.capacity.used).toBeLessThanOrEqual(s.md61.capacity.available);
   });
@@ -272,7 +291,7 @@ describe('team demand cap (SKUs share the same customers)', () => {
     expect(m.demand.F01.capFactor).toBeLessThan(1);
     // MD61 for 10 days ≈ team total, not 4 × 13k
     const s = buildSnapshot(ds, c);
-    expect(s.md61.rows.reduce((a, r) => a + r.forecast, 0)).toBeLessThanOrEqual(13_000 * 1.2 * s.md61.horizon + 4 * 1000);
+    expect(s.md61.rows.reduce((a, r) => a + r.forecast, 0)).toBeLessThanOrEqual(13_000 * 1.2 * s.md61.horizon + 4 * c.lotMax);
   });
 
   it('small raw storage cuts the plan (lowest margin first) instead of only warning', () => {
