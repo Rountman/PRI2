@@ -338,7 +338,7 @@ export function roundCards(m: Model, md: Md61Plan, vk: Vk32Table): ActionCard[] 
 export function investCards(m: Model, md: Md61Plan): ActionCard[] {
   const { cfg } = m;
   const out: ActionCard[] = [];
-  const loan = loanAdvice(cfg, { cash: m.cash, loan: m.loan, rawNextCycle: md.materials.cost, remainingDays: m.remainingDays });
+  const loan = loanAdvice(cfg, { cash: m.cash, loan: m.loan, payables: m.finance?.payables, receivables: m.finance?.receivables, remainingDays: m.remainingDays });
   if (m.loan > 0 && (loan.generic || loan.repay > 0)) {
     out.push(
       card(m, {
@@ -355,7 +355,7 @@ export function investCards(m: Model, md: Md61Plan): ActionCard[] {
           summary: 'Rating se nezmění (DebtLoading = Cash − Loan zůstává), úrok klesne.',
           data: [
             { label: 'Cash', value: fmtEUR(loan.cash) },
-            { label: 'Rezerva', value: `${fmtEUR(loan.reserve)} (fixní ${cfg.reserve.fixedDays} dní + suroviny + ${fmtEUR(cfg.reserve.buffer)})` },
+            { label: 'Rezerva', value: `${fmtEUR(loan.reserve)} (mzdy, režie, SG&A a úrok ${cfg.reserve.fixedDays} dní + ${fmtEUR(cfg.reserve.buffer)} + dodavatelé nad pohledávkami)` },
             { label: 'Úvěr', value: fmtEUR(loan.loan) },
           ],
           rule: '5.4 Splátka úvěru',

@@ -4,7 +4,7 @@ import { analyze } from '../src/analysis/index.ts';
 import { buildSnapshot } from '../src/engine.ts';
 import { emptyDataset, type ActionCard, type Dataset } from '../src/types.ts';
 import { selectCards } from '../src/v2/cards.ts';
-import { setupMarginalTable } from '../src/v2/invest.ts';
+import { loanAdvice, setupMarginalTable } from '../src/v2/invest.ts';
 import { cutLots } from '../src/v2/lotsize.ts';
 import { buildModel, dailyDemand } from '../src/v2/model.ts';
 import { clockOf } from '../src/phase.ts';
@@ -212,6 +212,18 @@ describe('market overview (ZMARKET) and products we do not make', () => {
   it('nothing before the game or without ZMARKET', () => {
     expect(buildSnapshot(emptyDataset(), ext).status.market).toBeNull();
     expect(buildSnapshot(only(['InventoryReport.xlsx', 'SalesReport.xlsx']), six).status.market).toBeNull();
+  });
+});
+
+describe('loan repayment reserve', () => {
+  it('reserve = cash fixed costs (no depreciation) × days + buffer + (AP − AR if positive)', () => {
+    // real game GG day 41: cash 434k, AR 2,09M, AP 373k, loan 6,89M
+    const l = loanAdvice(ext, { cash: 434_189.73, loan: 6_890_000, payables: 372_998.1, receivables: 2_092_522, remainingDays: 59 });
+    const cashFixed = (20_000 + 15_000 + 40_000) / 5 + 6.89 * ext.interestPerDayPerM;
+    expect(l.reserve).toBeCloseTo(cashFixed * 10 + 200_000, 2);
+    expect(l.repay).toBe(60_000);
+    // suppliers not covered by customers raise the reserve
+    expect(loanAdvice(ext, { cash: 434_189.73, loan: 6_890_000, payables: 900_000, receivables: 500_000, remainingDays: 59 }).repay).toBe(0);
   });
 });
 

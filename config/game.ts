@@ -101,7 +101,16 @@ export function fixedPerDay(cfg: GameConfig, loan = cfg.initial.loan): number {
   return (f.labor + f.overhead + f.sga + f.depBuilding + f.depMachines) / f.periodDays + interestPerDay(cfg, loan);
 }
 
-/** Cash to keep before repaying the loan: fixed costs N days + next cycle raw materials + buffer. */
-export function cashReserve(cfg: GameConfig, rawNextCycle = 0): number {
-  return fixedPerDay(cfg) * cfg.reserve.fixedDays + rawNextCycle + cfg.reserve.buffer;
+/** Cash-paid fixed costs per day: labor + overhead + SG&A + interest (depreciation is not paid in cash). */
+export function cashFixedPerDay(cfg: GameConfig, loan = cfg.initial.loan): number {
+  const f = cfg.fixedCosts;
+  return (f.labor + f.overhead + f.sga) / f.periodDays + interestPerDay(cfg, loan);
+}
+
+/**
+ * Cash to keep before repaying the loan: cash fixed costs N days + buffer + suppliers not covered by customers (AP − AR).
+ * Raw materials are paid 20 days after delivery (they show up in AP), customers pay within 1–20 days (AR).
+ */
+export function cashReserve(cfg: GameConfig, fin: { loan?: number; payables?: number; receivables?: number } = {}): number {
+  return cashFixedPerDay(cfg, fin.loan) * cfg.reserve.fixedDays + cfg.reserve.buffer + Math.max(0, (fin.payables ?? 0) - (fin.receivables ?? 0));
 }

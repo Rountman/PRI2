@@ -73,7 +73,7 @@ export function buildSnapshot(ds: Dataset, cfg: GameConfig, opts: SnapshotOption
     status: { dcs: dcStatus(m), plant: plantStatus(m, md61), market },
     assortment: { current: m.assortment, review: m.review },
     invest: {
-      loan: loanAdvice(cfg, { cash: m.cash, loan: m.loan, rawNextCycle: md61.materials.cost, remainingDays: m.remainingDays }),
+      loan: loanAdvice(cfg, { cash: m.cash, loan: m.loan, payables: m.finance?.payables, receivables: m.finance?.receivables, remainingDays: m.remainingDays }),
       setup: setupMarginalTable(cfg, { currentSpend: m.setupSpend, changeoversPerRound: changeovers, marginPerUnit: margin, remainingRounds: m.remainingRounds }),
       capacity: capacityAdvice(m, demand, md61.rows.filter((r) => r.stock <= 0 && r.demand.perDay > 0).length),
       avgMargin: margin,

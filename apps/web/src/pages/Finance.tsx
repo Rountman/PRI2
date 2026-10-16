@@ -147,7 +147,7 @@ export function Investice({ s }: { s: StateResponse }) {
             ? `Bez financí: každý splacený 1M ušetří ${fmtEUR(loan.perMillionPerDay)}/den. Opiš Cash a Úvěr v záložce Další importy.`
             : `Splatit ${fmtEUR(loan.repay)} (cash ${fmtEUR(loan.cash)} − rezerva ${fmtEUR(loan.reserve)}) → úspora ${fmtEUR(loan.interestSaved)} do konce hry.`}
         </p>
-        <p className="mt-1 text-sm text-mute">Rating se nezmění (DebtLoading = Cash − Úvěr …), klesne úrok. Rezerva = fixní náklady {cfg.reserve.fixedDays} dní + suroviny na příští cyklus + {fmtEUR(cfg.reserve.buffer)}.</p>
+        <p className="mt-1 text-sm text-mute">Rating se nezmění (DebtLoading = Cash − Úvěr …), klesne úrok. Rezerva = placené fixní náklady (mzdy, režie, SG&A, úrok – bez odpisů) {cfg.reserve.fixedDays} dní + {fmtEUR(cfg.reserve.buffer)} + závazky dodavatelům nad pohledávkami (suroviny se platí za 20 dní).</p>
       </Panel>
 
       <Panel title="Kapacita +1 000 ks/den za €1M">
