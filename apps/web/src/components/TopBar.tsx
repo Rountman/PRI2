@@ -80,19 +80,19 @@ const PHASES: { id: Phase | 'auto'; label: string }[] = [
   { id: 'mezi-koly', label: 'Mezi koly' },
 ];
 
-/** Phase switch – only for this browser; teammates keep their own view. */
-export function PhasePicker({ s, phase, setPhase }: { s: StateResponse; phase: Phase | null; setPhase: (p: Phase | null) => void }) {
+export function PhasePicker({ s }: { s: StateResponse }) {
   const c = s.snapshot.clock;
+  const forced = s.clock.phase ?? (s.clock.betweenRounds ? 'mezi-koly' : null);
   return (
     <label className="flex items-center gap-2">
       <span className={cx('rounded-lg px-3 py-1 text-lg font-bold', c.phase === 'pred-hrou' ? 'bg-high/20 text-amber-200' : 'bg-accent/15 text-sky-200')} data-testid="phase">
         {c.label}
       </span>
       <select
-        value={phase ?? 'auto'}
-        onChange={(e) => setPhase(e.target.value === 'auto' ? null : (e.target.value as Phase))}
+        value={forced ?? 'auto'}
+        onChange={(e) => void api.setClock({ ...s.clock, phase: e.target.value === 'auto' ? null : (e.target.value as Phase), betweenRounds: false })}
         className="rounded-md border border-line bg-panel2 px-1 py-1 text-sm text-mute"
-        title="Fáze se určí z dat. Přepnutí platí jen v tvém prohlížeči – ostatním se nezmění."
+        title="Fáze se určí z dat (max den v SalesReport). Tady jde přepnout ručně."
       >
         {PHASES.map((p) => (
           <option key={p.id} value={p.id}>

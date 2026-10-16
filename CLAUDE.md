@@ -58,7 +58,7 @@ Pravidla hry: bez zásob se nic neprodá. Preference zákazníků se během hry 
 ProcSourcing (ZME13: ceny surovin, mění se po 5 dnech), PurchaseOrderTracking (ZME2N), ProductionReport (ZCOOIS), Company-Valuation, ruční finance (cash, AR, AP, loan, net income, 478000).
 
 ## 4. Fáze hry a co appka dělá v každé
-Fáze se určí z dat (max Round/Day v SalesReport). Bez dat = **„Před hrou“**. **Den 20 (kromě posledního kola) = „Mezi koly“ automaticky.** Jde přepnout i ručně – **jen ve vlastním prohlížeči** (`/api/state?phase=…`, localStorage), ostatním se nepřepne. Sdílené jsou jen ✓ karet, Nastavení a herní den.
+Fáze se určí z dat (max Round/Day v SalesReport). Bez dat = **„Před hrou“**. **Den 20 (kromě posledního kola) = „Mezi koly“ automaticky.** Jde přepnout i ručně.
 
 ### 4.1 Před hrou (žádná data) – musí fungovat z presetu
 Appka zobrazí **startovní checklist** v pořadí (každý bod = akční karta s hodnotami ke zkopírování):

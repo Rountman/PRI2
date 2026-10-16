@@ -1,5 +1,4 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import type { Phase } from '@copilot/engine';
 import { api, type IngestResult, type StateResponse } from './api.ts';
 import { Channels, Findings, Plant, Products } from './components/Status.tsx';
 import { Md61Table, Vk32Table } from './components/Tables.tsx';
@@ -86,21 +85,7 @@ function Drawer({ s, tab, setTab, onClose, pending }: { s: StateResponse; tab: s
   );
 }
 
-export function Shell({
-  s,
-  online,
-  lastOk,
-  initialDrawer = null,
-  phase = null,
-  setPhase = () => {},
-}: {
-  s: StateResponse;
-  online: boolean;
-  lastOk: Date | null;
-  initialDrawer?: string | null;
-  phase?: Phase | null;
-  setPhase?: (p: Phase | null) => void;
-}) {
+export function Shell({ s, online, lastOk, initialDrawer = null }: { s: StateResponse; online: boolean; lastOk: Date | null; initialDrawer?: string | null }) {
   const [drawer, setDrawer] = useState<string | null>(initialDrawer);
   const [pending, setPending] = useState<Unknown[]>([]);
   const onUnknown = (res: IngestResult[], files: File[]) => {
@@ -119,7 +104,7 @@ export function Shell({
           <h1 className="text-xl font-black tracking-tight">
             ERPsim <span className="text-accent">Copilot</span>
           </h1>
-          <PhasePicker s={s} phase={phase} setPhase={setPhase} />
+          <PhasePicker s={s} />
           <ValuationBadge s={s} />
           <DropZone s={s} onUnknown={onUnknown} />
           <DataChips s={s} />
@@ -149,5 +134,5 @@ export function App() {
   const live = useLiveState();
   if (live.needPin) return <PinScreen onOk={() => void live.refresh()} />;
   if (!live.state) return <div className="flex min-h-screen items-center justify-center text-2xl text-mute">{live.error ? `Server nedostupný: ${live.error}` : 'Načítám…'}</div>;
-  return <Shell s={live.state} online={live.online} lastOk={live.lastOk} phase={live.phase} setPhase={live.setPhase} />;
+  return <Shell s={live.state} online={live.online} lastOk={live.lastOk} />;
 }

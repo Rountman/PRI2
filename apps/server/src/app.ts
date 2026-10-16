@@ -28,26 +28,20 @@ export function createApp(store: Store, opts: AppOptions = {}) {
   const app = new Hono();
   const listeners = new Set<Listener>();
   let version = 1;
-  // one snapshot per viewer phase (auto / pred-hrou / kolo / mezi-koly) – phase is per viewer, not shared
-  let cache = new Map<string, { version: number; snap: Snapshot }>();
+  let cache: { version: number; snap: Snapshot } | null = null;
 
   const changed = () => {
     version++;
-    cache = new Map();
+    cache = null;
     for (const l of listeners) l(version);
   };
 
-  const PHASES = ['pred-hrou', 'kolo', 'mezi-koly'];
-  const snapshot = (viewerPhase?: string | null): Snapshot => {
-    const phase = viewerPhase && PHASES.includes(viewerPhase) ? (viewerPhase as ClockOverride['phase']) : null;
-    const key = phase ?? 'auto';
-    const hit = cache.get(key);
-    if (hit && hit.version === version) return hit.snap;
-    // shared part of the clock override = only the game day; the phase comes from the viewer
-    const shared = store.clock();
-    const snap = buildSnapshot(store.dataset(), store.config(), { clock: { gameDay: shared.gameDay ?? null, phase }, done: store.done() });
-    cache.set(key, { version, snap });
-    return snap;
+  const snapshot = (): Snapshot => {
+    if (!cache || cache.version !== version) {
+      const cfg = store.config();
+      cache = { version, snap: buildSnapshot(store.dataset(), cfg, { clock: store.clock(), done: store.done() }) };
+    }
+    return cache.snap;
   };
 
   // ---------- PIN ----------
@@ -70,7 +64,7 @@ export function createApp(store: Store, opts: AppOptions = {}) {
 
   // ---------- state ----------
   app.get('/api/state', (c) => {
-    const snap = snapshot(c.req.query('phase'));
+    const snap = snapshot();
     return c.json({
       version,
       serverTime: new Date().toISOString(),
@@ -173,9 +167,9 @@ export function createApp(store: Store, opts: AppOptions = {}) {
     return c.json({ ok: true, config: store.config() });
   });
   app.put('/api/clock', async (c) => {
-    // shared: only the game day override. The phase is per viewer (GET /api/state?phase=…).
     const ov = await c.req.json<ClockOverride>();
-    store.setSetting('clock', { gameDay: ov.gameDay || null });
+    const phase = ov.phase && ['pred-hrou', 'kolo', 'mezi-koly'].includes(ov.phase) ? ov.phase : null;
+    store.setSetting('clock', { gameDay: ov.gameDay || null, betweenRounds: !!ov.betweenRounds, phase });
     changed();
     return c.json({ ok: true });
   });
