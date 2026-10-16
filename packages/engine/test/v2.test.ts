@@ -277,6 +277,38 @@ describe('demand (5.1)', () => {
   });
 });
 
+describe('MD61 values in packs (live game)', () => {
+  it('every MD61 value is a multiple of 16 000 and MD01 gives exactly the shown lots', () => {
+    const sale = (gameDay: number, material: string, quantity: number) => ({
+      round: 1, day: gameDay, gameDay, area: 'N', location: '02', dc: '12', material, teamCode: 'GG', description: '', netPrice: 5.2, quantity, netValue: quantity * 5.2, cost: quantity * 1.5,
+    });
+    const inv = (material: string, stock: number) => ({ location: '02', category: 'Finished Goods', material, teamCode: 'GG', description: '', stock, reserved: 0, unit: 'ST' });
+    const ds = { ...emptyDataset(), sales: [sale(4, 'F01', 9_000), sale(5, 'F02', 7_000), sale(5, 'F03', 6_000)], inventory: [inv('F01', 28_049), inv('F02', 3_500), inv('F03', 200_000)] } as Dataset;
+    const c = resolveConfig({ assortment: ['F01', 'F02', 'F03'], assortmentAuto: false });
+    const s = buildSnapshot(ds, c);
+    for (const r of s.md61.rows) {
+      expect(r.forecast % 16_000).toBe(0);
+      expect(cutLots(r.forecast - r.stock - r.wip, c).reduce((a, x) => a + x, 0)).toBe(r.planned);
+    }
+    expect(s.md61.rows.find((r) => r.sku === 'F03')!.forecast).toBe(0); // covered by stock
+  });
+});
+
+describe('assortment SKU without sales in the window', () => {
+  it('sold out / newly added → demand from our share of its market, not 0', () => {
+    const sale = (gameDay: number, material: string, quantity: number) => ({
+      round: 1, day: gameDay, gameDay, area: 'N', location: '02', dc: '12', material, teamCode: 'GG', description: '', netPrice: 6, quantity, netValue: quantity * 6, cost: quantity * 1.5,
+    });
+    const mk = (material: string, quantity: number) => ({ round: 1, day: 10, gameDay: 10, material, description: '', area: 'N', price: 6, quantity, value: quantity * 6 });
+    const ds = { ...emptyDataset(), sales: [sale(9, 'F03', 10_000), sale(10, 'F03', 10_000)], market: [mk('F03', 100_000), mk('F01', 50_000)] } as Dataset;
+    const c = resolveConfig({ assortment: ['F01', 'F03'], assortmentAuto: false });
+    const m = buildModel(ds, c, analyze(ds, c));
+    expect(m.demand.F01.source).toBe('trh');
+    expect(m.demand.F01.perDay).toBeCloseTo((50_000 / 5) * 0.2, 6); // our share 20k / 100k
+    expect(buildSnapshot(ds, c).md61.rows.find((r) => r.sku === 'F01')!.planned).toBeGreaterThan(0);
+  });
+});
+
 describe('team demand cap (SKUs share the same customers)', () => {
   // real game GG round 1: one 500 g SKU on the shelf at a time, each sells ~13k/day, but the team sells ~13k/day in total
   const sale = (gameDay: number, material: string, quantity: number) => ({
@@ -315,8 +347,9 @@ function check(ds: Dataset) {
       expect(l).toBeGreaterThanOrEqual(cfg.lotMin);
       expect(l).toBeLessThanOrEqual(cfg.lotMax);
     }
-    expect(r.lots).toEqual(cutLots(r.forecast - r.stock - r.wip, cfg));
-    expect(r.forecast % 1000).toBe(0);
+    if (r.lots.length) expect(r.lots).toEqual(cutLots(r.forecast - r.stock - r.wip, cfg));
+    else expect(cutLots(r.forecast - r.stock - r.wip, cfg)).toEqual([]);
+    expect(r.forecast % (cfg.lotRounding === cfg.lotMin ? cfg.lotMin : 1000)).toBe(0);
   }
   // raw/packaging storage after ME59N deliveries never over the limit
   expect(s.md61.materials.rawPeak).toBeLessThanOrEqual(cfg.storage.raw);

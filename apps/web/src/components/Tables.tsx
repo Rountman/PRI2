@@ -26,7 +26,7 @@ function Md61Why({ r, s }: { r: Md61Row; s: StateResponse }) {
       <table className="num w-full text-sm">
         <tbody>
           {[
-            ['Poptávka / den', `${fmtNum(r.demand.perDay)} ks (${r.demand.source === 'preset' ? 'preset: trh kanálu / sortiment / startovní cena' : `průměr ${r.demand.inStockDays} dnů se skladem`})`],
+            ['Poptávka / den', `${fmtNum(r.demand.perDay)} ks (${r.demand.source === 'preset' ? 'preset: trh kanálu / sortiment / startovní cena' : r.demand.source === 'trh' ? 'bez prodejů (vyprodáno / nový) → náš obvyklý podíl na trhu výrobku (ZMARKET)' : `průměr ${r.demand.inStockDays} dnů se skladem`})`],
             ['Vyprodáno dnů v okně', `${r.demand.stockoutDays}${r.demand.boosted ? ` → × ${cfg.md61.stockoutBoost}` : ''}`],
             ['Sklad', `${fmtNum(r.stock)} ks`],
             ['Rozpracovaná výroba', md.wipKnown ? `${fmtNum(r.wip)} ks` : 'neznámá (ProductionReport v Rozšířeném) → 0'],
@@ -46,7 +46,7 @@ function Md61Why({ r, s }: { r: Md61Row; s: StateResponse }) {
       <p className="text-sm">
         Riziko: [OVĚŘIT] jak MD61 nakládá se spotřebou prognózy prodeji. Po MD01 porovnej planned orders s tímto sloupcem – když nesedí, přepni režim v Nastavení.
       </p>
-      <Badge tone={md.pregame ? 'good' : r.demand.source === 'preset' ? 'high' : 'mid'}>jistota: {md.pregame ? 'jisté' : r.demand.source === 'preset' ? 'odhad' : 'pravděpodobné'}</Badge>
+      <Badge tone={md.pregame ? 'good' : r.demand.source !== 'prodeje' ? 'high' : 'mid'}>jistota: {md.pregame ? 'jisté' : r.demand.source !== 'prodeje' ? 'odhad' : 'pravděpodobné'}</Badge>
     </div>
   );
 }

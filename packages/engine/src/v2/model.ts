@@ -41,7 +41,7 @@ export type Demand = {
   sku: string;
   perDay: number;
   base: number; // before stock-out boost
-  source: 'prodeje' | 'preset';
+  source: 'prodeje' | 'preset' | 'trh';
   inStockDays: number;
   stockoutDays: number;
   boosted: boolean;
@@ -144,6 +144,20 @@ export function teamDemand(cfg: GameConfig, gameDay: number, daily: ReturnType<t
   return { perDay, cap, days: totals.length, sumSkus, factor: sumSkus > cap ? cap / sumSkus : 1 };
 }
 
+/** Units/day of a SKU at our average market share (latest ZMARKET window, SKUs we sold there). Null without data. */
+export function marketDemand(ds: Dataset, cfg: GameConfig): ((sku: string) => number) | null {
+  if (!ds.market.length) return null;
+  const last = Math.max(...ds.market.map((r) => r.gameDay));
+  const win = ds.market.filter((r) => r.gameDay === last);
+  const mkt = (sku: string) => sum(win.filter((r) => r.material === sku).map((r) => r.quantity));
+  const ours = (sku: string) => sum(ds.sales.filter((s) => s.material === sku && s.gameDay > last - 5 && s.gameDay <= last).map((s) => s.quantity));
+  const sold = [...new Set(win.map((r) => r.material))].filter((s) => ours(s) > 0);
+  if (!sold.length) return null;
+  const share = sum(sold.map(ours)) / Math.max(1, sum(sold.map(mkt)));
+  const days = cfg.md61.demandWindow || 5;
+  return (sku) => (mkt(sku) / days) * share;
+}
+
 // ---------- model ----------
 export type Model = {
   ds: Dataset;
@@ -203,6 +217,17 @@ export function buildModel(ds: Dataset, cfg: GameConfig, a: Analysis): Model {
     const dcs = allowedDcs(cfg, sku);
     price[sku] = (!pregame && ourPrice(ds, sku, null, g, cfg.md61.demandWindow)) || round2(sum(dcs.map((dc) => startPrice(cfg, sku, dc))) / (dcs.length || 1));
     margin[sku] = round2(price[sku] - unitCost[sku]);
+  }
+  // in the assortment but no sales in the window (sold out / newly added) → our usual share of its market (ZMARKET)
+  if (!pregame) {
+    const est = marketDemand(ds, cfg);
+    for (const sku of assortment) {
+      const d = demand[sku];
+      if (!d || (d.perDay > 0 && d.source !== 'preset')) continue;
+      const perDay = est?.(sku) ?? presetDemand(cfg, sku, assortment).perDay;
+      const p = presetDemand(cfg, sku, assortment);
+      demand[sku] = { ...d, perDay, base: perDay, source: est ? 'trh' : 'preset', byDc: Object.fromEntries(Object.entries(p.byDc).map(([k, v]) => [k, (v / (p.perDay || 1)) * perDay])) };
+    }
   }
   const team_ = pregame ? null : teamDemand(cfg, g, daily, demand, assortment);
   if (team_ && team_.factor < 1)

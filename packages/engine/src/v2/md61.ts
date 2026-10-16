@@ -36,6 +36,18 @@ function lotsFor(m: Model, forecast: number, stock: number, wip: number): number
   return cutLots(m.cfg.md61.mode === 'doplnění' ? forecast : forecast - stock - wip, m.cfg);
 }
 
+/**
+ * MD61 value that makes MD01 create exactly `sumLots` (forecast − stock − WIP just below Σ lots).
+ * Pack mode: the value itself is a multiple of 16 000 (one exists in every 16k window); nothing to produce → 0.
+ */
+function md61Value(m: Model, sumLots: number, stock: number, wip: number, fallback: number): number {
+  const { cfg } = m;
+  if (cfg.md61.mode === 'doplnění') return sumLots;
+  const pack = cfg.lotRounding === cfg.lotMin;
+  if (sumLots <= 0) return pack ? 0 : fallback;
+  return pack ? roundDown(stock + wip + sumLots, cfg.lotMin) : roundDown(stock + wip, 1000) + sumLots;
+}
+
 export function md61Plan(m: Model): Md61Plan {
   const { cfg } = m;
   const perDay = cfg.capacityPerDay;
@@ -51,9 +63,8 @@ export function md61Plan(m: Model): Md61Plan {
     else if (cfg.md61.mode === 'doplnění') forecast = roundUp(Math.max(0, d.perDay * horizon - stock - wip), 1000);
     else forecast = roundUp(d.perDay * horizon, 1000);
     const lots = lotsFor(m, forecast, stock, wip);
-    // MD61 value that yields exactly these lots after MD01 (forecast − stock − WIP just below Σ lots)
     const sumLots = lots.reduce((a, x) => a + x, 0);
-    if (sumLots > 0) forecast = cfg.md61.mode === 'doplnění' ? sumLots : roundDown(stock + wip, 1000) + sumLots;
+    forecast = md61Value(m, sumLots, stock, wip, forecast);
     return {
       sku,
       mat: m.mat(sku),
@@ -82,7 +93,7 @@ export function md61Plan(m: Model): Md61Plan {
   const setPlanned = (r: Md61Row, target: number) => {
     r.lots = fitLots(target, cfg);
     r.planned = r.lots.reduce((a, x) => a + x, 0);
-    r.forecast = cfg.md61.mode === 'doplnění' ? r.planned : r.planned > 0 ? roundDown(r.stock + r.wip, 1000) + r.planned : 0;
+    r.forecast = md61Value(m, r.planned, r.stock, r.wip, 0);
     r.cut = true;
   };
   const cutSkus: string[] = [];
