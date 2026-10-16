@@ -62,7 +62,7 @@ Fáze se určí z dat (max Round/Day v SalesReport). Bez dat = **„Před hrou�
 
 ### 4.1 Před hrou (žádná data) – musí fungovat z presetu
 Appka zobrazí **startovní checklist** v pořadí (každý bod = akční karta s hodnotami ke zkopírování):
-1. **Sortiment – „plošně a po 1. kole rozseknout“**: 1. kolo všech 8 příchutí kromě Original/Mixed (F01–F04, F11–F14), abychom poznali preference trhu. Po 1. kole (`assortmentReview`) appka seřadí pool podle tržeb celého trhu (ZMARKET) × naší marže a nechá `assortmentTarget` = 5 (vždy ≥ 1× 1 kg a ≥ 1× 500 g). Vyřazené dostanou MD61 = 0 a doprodají se; karta „Sortiment od kola 2“ v fázi Mezi koly. Vypínač `assortmentAuto` v Nastavení.
+1. **Sortiment – „plošně a po 1. kole rozseknout“**: 1. kolo všechny zaškrtnuté výrobky (Nastavení → Sortiment; default 8 příchutí kromě Original/Mixed, **tým GG má zaškrtnuto 6: F01–F04, F11, F13**), abychom poznali preference trhu. Po 1. kole (`assortmentReview`) appka seřadí **jen zaškrtnuté** podle tržeb celého trhu (ZMARKET) × naší marže a nechá `assortmentTarget` = 5 (vždy ≥ 1× 1 kg a ≥ 1× 500 g). Vyřazené dostanou MD61 = 0 a doprodají se; karta „Sortiment od kola 2“ v fázi Mezi koly. Vypínač `assortmentAuto` v Nastavení.
 2. **ZCS02 recept**: default ponechat (35/35/30). V Rozšířeném je kalkulačka levnějšího receptu s varováním „může snížit poptávku“. Rozhodnout TEĎ, protože po výrobě už to nejde.
 3. **VK32 startovní ceny** per SKU × DC [ODHAD, editovatelné]: 500 g ≈ €5,20, 1 kg ≈ €7,50. DC10 −€0,30 (velmi cenově citlivé), DC14 +€0,30. Ceny jen tam, kde se balení prodává (DC10 jen 1 kg, DC14 jen 500 g).
 4. **ZFB50 setup reduction** (doporučení s výpočtem, viz 5.4). Default návrh 125k → 6 h [ODHAD].

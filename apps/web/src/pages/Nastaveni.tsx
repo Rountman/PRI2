@@ -6,7 +6,7 @@ import { cx, Panel } from '../components/ui.tsx';
 
 const LABELS: Record<string, string> = {
   teamCode: 'Kód týmu (prefix materiálu, např. GG → GG-F01)',
-  assortmentAuto: 'Sortiment po 1. kole vybírá appka',
+  assortmentAuto: 'Po 1. kole appka ze zaškrtnutých nechá nejlepší',
   assortmentTarget: 'Kolik výrobků nechat po 1. kole',
   roundLength: 'Délka kola (dny)',
   rounds: 'Počet kol',
@@ -60,7 +60,7 @@ const LABELS: Record<string, string> = {
   'dataAgeSec.orange': 'Čip 🟠 do (s)',
 };
 const GROUPS = ['initial', 'setup', 'fixedCosts', 'md61', 'md61.firstCycleQty', 'pricing', 'reserve', 'dataAgeSec', 'storage', 'storageExtraPerDay'];
-const SKIP = ['preset', 'assortment', 'assortmentPool', 'startPrices'];
+const SKIP = ['preset', 'assortment', 'assortmentPool', 'startPrices']; // assortmentPool: obsolete key in older saved settings
 
 type Field = { path: string; value: unknown };
 

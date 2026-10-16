@@ -124,7 +124,7 @@ describe('assortment: broad in round 1, best 5 after round 1', () => {
     expect(rv.keep.some((s) => s.startsWith('F1'))).toBe(true);
     expect(rv.keep.some((s) => s.startsWith('F0'))).toBe(true);
     expect(rv.keep).toEqual(expect.arrayContaining(['F12', 'F13']));
-    expect([...rv.keep, ...rv.drop].sort()).toEqual([...cfg.assortmentPool].sort());
+    expect([...rv.keep, ...rv.drop].sort()).toEqual([...cfg.assortment].sort());
   });
 
   it('dropped SKUs get MD61 = 0 and no lots; card in Mezi koly lists MD61 = 0', () => {
@@ -145,6 +145,24 @@ describe('assortment: broad in round 1, best 5 after round 1', () => {
     const s = buildSnapshot(fixtureDataset(), resolveConfig({ preset: 'intro', assortmentAuto: false }));
     expect(s.assortment.current).toEqual(resolveConfig({ preset: 'intro' }).assortment);
     expect(s.md61.rows.every((r) => !r.dropped)).toBe(true);
+  });
+});
+
+describe('assortment review uses only the ticked SKUs', () => {
+  it('team GG: 6 ticked (no F12, F14) → keeps 5 of those 6, never F12/F14', () => {
+    const six = resolveConfig({ preset: 'intro', assortment: ['F01', 'F02', 'F03', 'F04', 'F11', 'F13'] });
+    const rv = assortmentReview(fixtureDataset(), six, analyze(fixtureDataset(), six))!;
+    expect(rv.keep).toHaveLength(5);
+    expect(rv.drop).toHaveLength(1);
+    expect([...rv.keep, ...rv.drop]).not.toContain('F12');
+    expect([...rv.keep, ...rv.drop]).not.toContain('F14');
+  });
+
+  it('exactly 5 ticked → nothing to drop, no assortment card', () => {
+    const five = resolveConfig({ preset: 'intro', assortment: ['F02', 'F03', 'F11', 'F12', 'F13'] });
+    const s = buildSnapshot(fixtureDataset(), five, { clock: { gameDay: 20 } });
+    expect(s.assortment.review!.drop).toEqual([]);
+    expect(s.cards.some((c) => c.kind === 'sortiment')).toBe(false);
   });
 });
 

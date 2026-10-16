@@ -47,8 +47,7 @@ export type GameConfig = {
   extraCapacityUtilization: number; // what-if: share of added capacity that will actually sell (0..1)
 
   // ---- v2 decision parameters ----
-  assortment: string[]; // SKUs we produce in round 1 (from round 2 the review below decides when assortmentAuto)
-  assortmentPool: string[]; // candidates for the review after round 1
+  assortment: string[]; // SKUs we produce in round 1 = the only candidates for the review after round 1
   assortmentTarget: number; // how many SKUs to keep after round 1
   assortmentAuto: boolean; // true = from round 2 MD61 follows the review, not `assortment`
   startPrices: { '500g': number; '1kg': number; dcAdjust: Record<string, number>; overrides: Record<string, number> }; // overrides key "F12:12"

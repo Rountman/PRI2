@@ -53,7 +53,6 @@ const EXTENDED: GameConfig = {
 
   // round 1 broad (all flavors except Original/Mixed), after round 1 keep the best 5 by market revenue × our margin
   assortment: ['F01', 'F02', 'F03', 'F04', 'F11', 'F12', 'F13', 'F14'],
-  assortmentPool: ['F01', 'F02', 'F03', 'F04', 'F11', 'F12', 'F13', 'F14'],
   assortmentTarget: 5,
   assortmentAuto: true,
   startPrices: { '500g': 5.2, '1kg': 7.5, dcAdjust: { '10': -0.3, '12': 0, '14': 0.3 }, overrides: {} }, // [ODHAD]
