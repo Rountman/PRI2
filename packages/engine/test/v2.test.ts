@@ -183,8 +183,9 @@ describe('marketing (ZADS) per product × region', () => {
       expect(rs).toHaveLength(3);
       if (!rs[0].advise) expect(rs.every((r) => r.eurPerDay === 0)).toBe(true);
       else if (rs.every((r) => r.share !== null)) {
-        const weakest = [...rs].sort((a, b) => a.share! - b.share!)[0];
-        expect(weakest.eurPerDay).toBeGreaterThan(Math.min(...rs.map((r) => r.eurPerDay)));
+        const [lo, next] = [...rs].sort((a, b) => a.share! - b.share!);
+        if (lo.share! < next.share!) expect(lo.eurPerDay).toBeGreaterThan(next.eurPerDay);
+        else expect(new Set(rs.map((r) => r.eurPerDay)).size).toBe(1); // tie → nobody gets the boost
       }
     }
   });
