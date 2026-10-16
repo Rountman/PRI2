@@ -42,7 +42,7 @@ const EXTENDED: GameConfig = {
   setupSteps: [50_000, 125_000, 250_000, 500_000, 1_250_000],
   lotMin: 16_000,
   lotMax: 48_000,
-  lotRounding: 1_000,
+  lotRounding: 16_000, // ostrá hra: výroba jen po 16 000 / 48 000 ks
   fixedCosts: { periodDays: 5, labor: 20_000, overhead: 15_000, sga: 40_000, depBuilding: 1_250, depMachines: 50_000 },
   depreciationPerDayPerM: 10_000 / 24, // 50 000 / 5 days / €24M
   interestPerDayPerM: 2_644.8 / 8,
@@ -53,13 +53,12 @@ const EXTENDED: GameConfig = {
 
   // round 1 broad (all flavors except Original/Mixed), after round 1 keep the best 5 by market revenue × our margin
   assortment: ['F01', 'F02', 'F03', 'F04', 'F11', 'F12', 'F13', 'F14'],
-  assortmentPool: ['F01', 'F02', 'F03', 'F04', 'F11', 'F12', 'F13', 'F14'],
   assortmentTarget: 5,
   assortmentAuto: true,
   startPrices: { '500g': 5.2, '1kg': 7.5, dcAdjust: { '10': -0.3, '12': 0, '14': 0.3 }, overrides: {} }, // [ODHAD]
   setupProposal: 125_000, // [ODHAD]
   md61: {
-    firstCycleQty: { '500g': 16_000, '1kg': 24_000 }, // 8 SKUs + 8 setups must fit 10 days of capacity; 1 kg sells better
+    firstCycleQty: { '500g': 16_000, '1kg': 16_000 }, // one 16k pack per SKU (production only in 16k / 48k packs)
     nextMrpDays: 5,
     leadTimeMax: 5,
     stockoutBoost: 1.2,
@@ -71,10 +70,10 @@ const EXTENDED: GameConfig = {
   pricing: { step: 0.3, lowCoverDays: 3, highCoverDays: 8, anchorFloorPct: 10, warnFixedPerUnit: true },
   reserve: { fixedDays: 10, buffer: 200_000 },
   investPayback: 2,
-  maxCards: 5,
+  maxCards: 12, // rows in the 'Co se děje' table
   maxCritical: 2,
 
-  marketingEurPerRegionDay: 1_000,
+  marketingEurPerRegionDay: 100, // feedback po kole 2: jen symbolicky (500 g 100 €, 1 kg 50 €), 0 = vypnout
   // market size per team per week: Job aid Manufacturing Extended (HEC Montréal, 2020) – DC12 €220k, DC14 €130k
   channels: [
     { dc: '10', name: 'Hypermarkety', sizes: ['1kg'], marketPer5DaysPerTeam: 90_000, priceSensitivity: 'velmi vysoká', marketingSensitivity: 'nízká' },

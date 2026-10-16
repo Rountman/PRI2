@@ -161,7 +161,8 @@ export type ActionCard = {
   id: string; // stable within one data state – used for shared [✓]
   kind: string; // 'checklist' | 'md61' | 'vk32' | 'alert' | 'invest' …
   priority: Priority;
-  title: string;
+  observation: string; // what is happening (fact from the data)
+  title: string; // the recommendation
   profitEUR?: number; // estimated profit effect (sort key)
   impactEUR?: number; // the same translated to valuation
   deadline?: string;

@@ -55,30 +55,43 @@ function renderAll(s: StateResponse) {
 }
 
 describe('e2e: one screen', () => {
-  it('(a) no data → Před hrou, 7 checklist cards, A−, no "0 prodejů", no "Nahraj X"', async () => {
+  it('(a) no data → Před hrou, 7 start recommendations in a table, A−, no "0 prodejů", no "Nahraj X"', async () => {
     const s = await stateFor([]);
     renderAll(s);
     const { container, getByTestId } = render(<Shell s={s} online lastOk={new Date()} />);
     const text = container.textContent!;
     expect(getByTestId('phase').textContent).toBe('Před hrou');
     expect(text).toContain('(A−)');
-    expect(getByTestId('cards').children).toHaveLength(7);
+    const rows = getByTestId('findings').querySelectorAll('tbody tr');
+    expect(rows).toHaveLength(7);
+    // a report, not a to-do list: no step lists, no ✓ buttons; reasons only under (?)
+    expect(container.querySelector('ol')).toBeNull();
+    expect([...container.querySelectorAll('button')].some((b) => b.textContent?.includes('✓'))).toBe(false);
+    expect(getByTestId('findings').querySelectorAll('[role=tooltip]')).toHaveLength(7);
+    expect(getByTestId('findings').textContent).toContain('GG-F01');
+    // status tables need data – before the game they are not shown
+    expect(container.querySelector('[data-testid=products]')).toBeNull();
+    expect(container.querySelector('[data-testid=channels]')).toBeNull();
     expect(text).not.toMatch(/0 prodejů|bez prodejů|Nahraj [A-Z]/);
     expect(getByTestId('chips').textContent).toMatch(/⚪ Sklad.*⚪ Prodeje.*⚪ Trh/);
-    expect(getByTestId('md61').textContent).toMatch(/24\s000/);
+    expect(getByTestId('md61').textContent).toMatch(/16\s000/);
     expect(getByTestId('vk32').textContent).toContain('7,20');
   });
 
-  it('(b) 3 basic reports → round cards, MD61 + VK32', async () => {
+  it('(b) 3 basic reports → status tables + recommendations, MD61 + VK32', async () => {
     const s = await stateFor(BASIC.map(read), 'intro');
     renderAll(s);
     const { container, getByTestId } = render(<Shell s={s} online={false} lastOk={new Date()} />);
     expect(container.textContent).toContain('offline');
     expect(getByTestId('phase').textContent).toBe('Mezi koly (po kole 3)');
     expect(getByTestId('chips').textContent).toMatch(/🟢 Sklad.*🟢 Prodeje.*🟢 Trh/);
-    const n = getByTestId('cards').children.length;
+    const n = getByTestId('findings').querySelectorAll('tbody tr').length;
     expect(n).toBeGreaterThan(0);
-    expect(n).toBeLessThanOrEqual(5);
+    expect(n).toBeLessThanOrEqual(12);
+    expect(getByTestId('products').textContent).toMatch(/vyprodáno|dochází/);
+    expect(getByTestId('channels').textContent).toContain('DC 12');
+    expect(getByTestId('plant').textContent).toContain('Suroviny');
+    expect(getByTestId('market').textContent).toContain('GG-F13');
     expect(getByTestId('md61').textContent).toContain('F13');
   });
 

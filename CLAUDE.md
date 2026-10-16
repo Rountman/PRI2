@@ -26,7 +26,7 @@ Nejlepší poměr cena/výkon v tlaku soutěže: **nahraj max 3 xlsx → appka �
 | Dodavatelé | V01, V02. Lead time 1–5 dní, splatnost 20 dní. **Ceny surovin se mění každých 5 dní** |
 | Trh / tým / týden [JISTÉ – job aid Extended] | DC10 Hypermarkety €90k (jen 1 kg, cena velmi citlivá, reklama málo, splatnost 20 dní), DC12 Grocery €220k (obě balení, cena citlivá, reklama středně, 10–20 dní), DC14 Independent €130k (jen 500 g, cena středně, reklama hodně, 1–20 dní). Celkem ≈ €440k/týden ≈ €88k/den ≈ 14k ks/den → úzké hrdlo je spíš prodej než kapacita |
 | Recepty (minima) | ≥20 % wheat, ≥30 % oat, ≥20 % příchuť (Nut/Blueberry/Strawberry/Raisin), Mixed ≥30 % fruits&nuts (od každého něco), Original bez příchuti. 1 krabice + 1 sáček |
-| Výchozí BOM [JISTÉ – ověřeno na cvičných datech] | 35 % oat / 35 % wheat / 30 % příchuť. 500 g = 0,175/0,175/0,150 kg, 1 kg dvojnásobek |
+| Výchozí BOM [JISTÉ – cvičná data + ostrá hra ZCS02, závod G2] | 35 % oat (R06) / 35 % wheat (R05) / 30 % příchuť (R01 nuts, R02 blueberries, R03 strawberries, R04 raisins). 500 g = 0,175/0,175/0,150 kg + Small Bag P04 + Small Box P03; 1 kg = 0,350/0,350/0,300 kg + Large Bag P02 + Large Box P01. Test `packages/engine/test/bom.test.ts` |
 | Valuace | `((Profit − Setup)/Kola × 12 + Setup) / (7 % + riziková přirážka)`. Rating z `DebtLoading = Cash + AR − Loan − AP` (tabulka v archivu kap. 2). **Start: −6M → A− → 12,25 %** |
 | Počet kol | **5** [JISTÉ – potvrzeno týmem] |
 
@@ -62,7 +62,7 @@ Fáze se určí z dat (max Round/Day v SalesReport). Bez dat = **„Před hrou�
 
 ### 4.1 Před hrou (žádná data) – musí fungovat z presetu
 Appka zobrazí **startovní checklist** v pořadí (každý bod = akční karta s hodnotami ke zkopírování):
-1. **Sortiment – „plošně a po 1. kole rozseknout“**: 1. kolo všech 8 příchutí kromě Original/Mixed (F01–F04, F11–F14), abychom poznali preference trhu. Po 1. kole (`assortmentReview`) appka seřadí pool podle tržeb celého trhu (ZMARKET) × naší marže a nechá `assortmentTarget` = 5 (vždy ≥ 1× 1 kg a ≥ 1× 500 g). Vyřazené dostanou MD61 = 0 a doprodají se; karta „Sortiment od kola 2“ v fázi Mezi koly. Vypínač `assortmentAuto` v Nastavení.
+1. **Sortiment – „plošně a po 1. kole rozseknout“**: 1. kolo všechny zaškrtnuté výrobky (Nastavení → Sortiment; default 8 příchutí kromě Original/Mixed, **tým GG má zaškrtnuto 6: F01–F04, F11, F13**), abychom poznali preference trhu. Po 1. kole (`assortmentReview`) appka seřadí **jen zaškrtnuté** podle tržeb celého trhu (ZMARKET) × naší marže a nechá `assortmentTarget` = 5 (vždy ≥ 1× 1 kg a ≥ 1× 500 g). Vyřazené dostanou MD61 = 0 a doprodají se; karta „Sortiment od kola 2“ v fázi Mezi koly. Vypínač `assortmentAuto` v Nastavení.
 2. **ZCS02 recept**: default ponechat (35/35/30). V Rozšířeném je kalkulačka levnějšího receptu s varováním „může snížit poptávku“. Rozhodnout TEĎ, protože po výrobě už to nejde.
 3. **VK32 startovní ceny** per SKU × DC [ODHAD, editovatelné]: 500 g ≈ €5,20, 1 kg ≈ €7,50. DC10 −€0,30 (velmi cenově citlivé), DC14 +€0,30. Ceny jen tam, kde se balení prodává (DC10 jen 1 kg, DC14 jen 500 g).
 4. **ZFB50 setup reduction** (doporučení s výpočtem, viz 5.4). Default návrh 125k → 6 h [ODHAD].
@@ -71,7 +71,7 @@ Appka zobrazí **startovní checklist** v pořadí (každý bod = akční karta 
 7. Připomínka: **2. MRP cyklus spustit nejpozději den 4–5**, aby suroviny dorazily dřív, než doběhne 1. cyklus (lead time až 5 dní).
 
 ### 4.2 Během kola (data nahraná)
-Appka generuje max **5 akčních karet** seřazených podle dopadu v €. Z toho max 2 kritické (červené).
+Appka **hlásí stav, ne úkoly**: tabulka „Co se děje → doporučení“ (max 12 řádků, podle dopadu v €, max 2 červené), Přehled výrobků, **Trh** (poslední ZMARKET: všechny výrobky všech týmů, i ty, co nevyrábíme; nevyráběný výrobek s tržbami × marží > nejslabší vyráběný × 1,2 → doporučení „Zvážit zařazení“, sortiment se sám nemění), Obchody (DC, 5 dní), Výroba a sklady, MD61, VK32. Žádné kroky ani ✓ – SAP hodnoty a postup jsou v detailu pod (?).
 
 ## 5. Výpočty (čisté funkce v `packages/engine`, každá s testem)
 ### 5.1 Poptávka per SKU
@@ -101,18 +101,18 @@ SKU vyprodaný · do konce výroby < lead time a není nový MRP cyklus · cena 
 ## 6. UI – JEDNA obrazovka
 ```
 ┌ ERPsim Copilot ─ [Před hrou | Kolo 2 · den 9/20] ─ Valuace 77,3M (A−) ─ [⬆ Drop xlsx] 🟢Sklad 🟢Prodeje 🟠Trh ─ [Rozšířené ▸] ┐
-│ CO UDĚLAT TEĎ (max 5 karet)                                                                                              │
-│  ▸ [KRITICKÉ] F12 dojde za 1,5 dne → MD61 F12 = 96 000   [kopírovat]   T-code MD61 → MD01 → ME59N        (?)  [✓]  │
-│  ▸ Zvedni cenu F03 v DC14 na 5,50 €                        [kopírovat]   VK32 · DC 14                        (?)  [✓]  │
+│ CO SE DĚJE → DOPORUČENÍ (max 12 řádků)                                                                                   │
+│  ● GG-F12 dojde za 1,5 dne (sklad 600, prodej 4 871/den)   │ Prognóza MD61 GG-F12 = 49 000            +157k €   (?)      │
+│    GG-F03: pokrytí 0,4 dne < 3                             │ Zvýšit cenu GG-F03: DC 12 5,20 → 5,50 €   +14k €   (?)      │
+│ PŘEHLED VÝROBKŮ · OBCHODY (DC) · VÝROBA A SKLADY                                                                          │
 ├─────────────────────────────── MD61 – PROGNÓZA ──────────┬──────────── VK32 – CENY ──────────────────────────────────┤
 │ SKU   sklad  dny  prognóza  → planned orders              │ SKU    DC10      DC12      DC14     trh                   │
 │ F12   12k    1,5  96 000   2× 48k                         │ F12    7,20 ↑    7,50 ↑     –       7,73                  │
 └───────────────────────────────────────────────────────────┴───────────────────────────────────────────────────────────┘
 ```
 - Tabulky MD61 a VK32 jsou **přesně ve tvaru, v jakém se zadávají do SAPu** (stejné pořadí materiálů jako v SAP formuláři). U každé hodnoty je kopírování kliknutím.
-- **Appka rozhoduje sama** – karty jsou jen příkazy s hodnotami (žádné „zvaž / rozhodni“). Důvody nejsou pod nadpisem karty, ale pod (?).
+- **Appka hlásí, co se děje, a doporučuje** (řádek = pozorování z dat + doporučení). Žádný seznam úkolů. Důvody a hodnoty pro SAP jsou pod (?).
 - (?) u každé karty i řádku: **hover = krátký důvod** (1 věta + klíčová čísla), **klik → boční panel**: proč, čísla, pravidlo, riziko, jistota (jisté / pravděpodobné / odhad).
-- [✓] odškrtnutí se sdílí přes SSE. Odškrtnutá karta zešedne.
 - **„Rozšířené ▸“** = šuplík/drawer zprava, záložky: Další importy · Investice (what-if) · Recept (BOM kalkulačka) · Marketing (ZADS) · Strategie (text) · Nastavení (preset, parametry, počet kol, sortiment, PIN).
 - Velké fonty, tmavý režim, čeština. Žádné modály. Nic se nepočítá na serveru déle než 200 ms.
 

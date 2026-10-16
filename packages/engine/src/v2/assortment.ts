@@ -1,5 +1,5 @@
-// "Plošně a po 1. kole rozseknout": round 1 produces the broad assortment; once a full round of data
-// exists, rank the pool by market revenue × our margin rate and keep the best N (≥ 1 per pack size).
+// "Plošně a po 1. kole rozseknout": round 1 produces the ticked assortment; once a full round of data
+// exists, rank those SKUs by market revenue × our margin rate and keep the best N (≥ 1 per pack size).
 import type { GameConfig } from '@copilot/config';
 import type { Analysis } from '../analysis/index.ts';
 import { skuSize } from '../normalize.ts';
@@ -37,7 +37,7 @@ export function assortmentReview(ds: Dataset, cfg: GameConfig, a: Analysis): Ass
     ? market.map((m) => ({ sku: m.material, q: m.quantity, v: m.value }))
     : ds.sales.filter((s) => s.gameDay <= until).map((s) => ({ sku: s.material, q: s.quantity, v: s.netValue }));
   if (!src.length) return null;
-  const pool = cfg.assortmentPool;
+  const pool = cfg.assortment; // only what the team ticked in Nastavení
   const total = sum(src.filter((r) => pool.includes(r.sku)).map((r) => r.v)) || 1;
   const rows: AssortmentRow[] = pool.map((sku) => {
     const mine = src.filter((r) => r.sku === sku);

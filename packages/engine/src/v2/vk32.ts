@@ -1,6 +1,7 @@
 // 5.3 VK32 price recommendation per SKU × DC.
 import { skuLabel } from '../normalize.ts';
 import { round2 } from '../analysis/sales.ts';
+import { fmtNum } from '../format.ts';
 import { allowedDcs, marketAnchor, ourPrice, startPrice, type Model } from './model.ts';
 
 export type Vk32Action = 'zvýšit' | 'snížit' | 'držet' | 'nastavit';
@@ -56,15 +57,15 @@ export function vk32Table(m: Model): Vk32Table {
       } else if ((stock <= 0 && d.perDay > 0) || (cover !== null && cover < p.lowCoverDays)) {
         recommended = current + p.step;
         action = 'zvýšit';
-        reason = stock <= 0 ? 'vyprodáno' : `pokrytí ${cover!.toFixed(1)} dne < ${p.lowCoverDays}`;
+        reason = stock <= 0 ? 'vyprodáno' : `pokrytí ${fmtNum(cover!, 1)} dne < ${p.lowCoverDays}`;
       } else if (stock > 0 && (cover === null || cover > p.highCoverDays)) {
         const floor = anchor ? anchor.price * (1 - p.anchorFloorPct / 100) : -Infinity;
         recommended = Math.max(current - p.step, floor);
         action = recommended < current - 0.005 ? 'snížit' : 'držet';
-        reason = action === 'snížit' ? `pokrytí ${cover === null ? '∞' : cover.toFixed(0)} dní > ${p.highCoverDays}` : `pokrytí vysoké, ale cena už je u kotvy trhu −${p.anchorFloorPct} %`;
+        reason = action === 'snížit' ? `pokrytí ${cover === null ? '∞' : fmtNum(cover, 0)} dní > ${p.highCoverDays}` : `pokrytí vysoké, ale cena už je u kotvy trhu −${p.anchorFloorPct} %`;
       } else {
         recommended = current;
-        reason = cover !== null ? `pokrytí ${cover.toFixed(1)} dne – v pásmu ${p.lowCoverDays}–${p.highCoverDays}` : 'beze změny';
+        reason = cover !== null ? `pokrytí ${fmtNum(cover, 1)} dne – v pásmu ${p.lowCoverDays}–${p.highCoverDays}` : 'beze změny';
       }
       recommended = round2(recommended);
       const floorHit = recommended < unitCost;

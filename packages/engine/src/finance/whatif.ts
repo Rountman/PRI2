@@ -133,7 +133,7 @@ export function whatIf(f: FinanceSnapshot, cfg: GameConfig, inp: WhatIfInput, fa
   }
   const dProfit = effects.reduce((s, e) => s + e.profit, 0);
   const cash = f.cash - repay - inp.capacityEUR - inp.setupEUR;
-  const reserve = cashReserve(cfg);
+  const reserve = cashReserve(cfg, f ?? {});
   if (cash < reserve) warnings.push(`Cash klesne na ${Math.round(cash).toLocaleString('cs-CZ')} € – pod rezervou ${Math.round(reserve).toLocaleString('cs-CZ')} € (fixní náklady ${cfg.reserve.fixedDays} dní + buffer).`);
   const after = state(cash, f.loan - repay, profitEnd + dProfit, f.setupSpend + inp.setupEUR);
   return {

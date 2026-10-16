@@ -51,9 +51,9 @@ export type LoanAdvice = {
   generic: boolean; // no finance data → generic card
 };
 
-/** Repay `cash − reserve`; rating does not change (DebtLoading is unchanged), interest falls. */
-export function loanAdvice(cfg: GameConfig, inp: { cash: number | null; loan: number; rawNextCycle: number; remainingDays: number }): LoanAdvice {
-  const reserve = cashReserve(cfg, inp.rawNextCycle);
+/** Repay `cash − reserve`; rating does not change (cash and loan fall together), interest falls → profit ↑ → valuation ↑. */
+export function loanAdvice(cfg: GameConfig, inp: { cash: number | null; loan: number; payables?: number; receivables?: number; remainingDays: number }): LoanAdvice {
+  const reserve = cashReserve(cfg, inp);
   const repay = inp.cash === null ? 0 : Math.max(0, Math.min(inp.loan, Math.floor((inp.cash - reserve) / 10_000) * 10_000));
   const perDay = (repay / 1e6) * cfg.interestPerDayPerM;
   return {

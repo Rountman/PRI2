@@ -6,7 +6,7 @@ import { cx, Panel } from '../components/ui.tsx';
 
 const LABELS: Record<string, string> = {
   teamCode: 'Kód týmu (prefix materiálu, např. GG → GG-F01)',
-  assortmentAuto: 'Sortiment po 1. kole vybírá appka',
+  assortmentAuto: 'Po 1. kole appka ze zaškrtnutých nechá nejlepší',
   assortmentTarget: 'Kolik výrobků nechat po 1. kole',
   roundLength: 'Délka kola (dny)',
   rounds: 'Počet kol',
@@ -60,7 +60,7 @@ const LABELS: Record<string, string> = {
   'dataAgeSec.orange': 'Čip 🟠 do (s)',
 };
 const GROUPS = ['initial', 'setup', 'fixedCosts', 'md61', 'md61.firstCycleQty', 'pricing', 'reserve', 'dataAgeSec', 'storage', 'storageExtraPerDay'];
-const SKIP = ['preset', 'assortment', 'assortmentPool', 'startPrices'];
+const SKIP = ['preset', 'assortment', 'assortmentPool', 'startPrices']; // assortmentPool: obsolete key in older saved settings
 
 type Field = { path: string; value: unknown };
 
@@ -92,11 +92,17 @@ export function Nastaveni({ s }: { s: StateResponse }) {
   const [clockDay, setClockDay] = useState(String(s.clock.gameDay ?? ''));
   const [pin, setPin] = useState('');
   const [confirm, setConfirm] = useState('');
-  useEffect(() => setCfg(s.config), [s.config]);
+  // unsaved edits must survive live refreshes (anyone's upload re-sends the state with a new config object)
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => {
+    if (!dirty) setCfg(s.config);
+  }, [s.config, dirty]);
   const edit = (f: (next: GameConfig) => void) => {
     const next = structuredClone(cfg);
     f(next);
     setCfg(next);
+    setDirty(true);
+    setMsg('');
   };
 
   const save = async () => {
@@ -105,20 +111,26 @@ export function Nastaveni({ s }: { s: StateResponse }) {
       for (const [p, t] of Object.entries(json)) setPath(next, p, JSON.parse(t));
       await api.setConfig(next);
       setJson({});
+      setDirty(false);
       setMsg('✓ Uloženo – vše se přepočítalo.');
     } catch (e) {
       setMsg(`Chyba: ${(e as Error).message}`);
     }
   };
   const SaveBtn = () => (
-    <button onClick={() => void save()} className="rounded-lg bg-accent px-4 py-1.5 font-semibold text-slate-950">
-      Uložit
+    <button onClick={() => void save()} className={cx('rounded-lg px-4 py-1.5 font-semibold', dirty ? 'bg-high text-slate-950' : 'bg-accent text-slate-950')}>
+      {dirty ? 'Uložit změny' : 'Uložit'}
     </button>
   );
 
   return (
     <div className="space-y-4">
       {msg && <div className="text-good">{msg}</div>}
+      {dirty && (
+        <div className="sticky top-0 z-10 flex items-center justify-between rounded-lg bg-high/20 px-3 py-2 text-amber-200">
+          Neuložené změny – appka zatím počítá se starým nastavením. <SaveBtn />
+        </div>
+      )}
       <Panel title="Předvolba hry">
         <div className="flex flex-wrap items-center gap-3">
           {s.presets.map((p) => (
@@ -254,7 +266,7 @@ export function Nastaveni({ s }: { s: StateResponse }) {
             return (
               <details key={f.path} className="rounded-md border border-line p-2 text-sm">
                 <summary className="cursor-pointer">{label} (JSON)</summary>
-                <textarea rows={8} defaultValue={JSON.stringify(f.value, null, 2)} onChange={(e) => setJson({ ...json, [f.path]: e.target.value })} className="mt-2 w-full rounded-md border border-line bg-panel2 p-2 font-mono text-xs" />
+                <textarea rows={8} defaultValue={JSON.stringify(f.value, null, 2)} onChange={(e) => (setJson({ ...json, [f.path]: e.target.value }), setDirty(true))} className="mt-2 w-full rounded-md border border-line bg-panel2 p-2 font-mono text-xs" />
               </details>
             );
           })}

@@ -1,9 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { api, type IngestResult, type StateResponse } from './api.ts';
-import { ActionCard } from './components/ActionCard.tsx';
+import { Channels, Findings, Market, Plant, Products } from './components/Status.tsx';
 import { Md61Table, Vk32Table } from './components/Tables.tsx';
 import { DataChips, DropZone, PhasePicker, ValuationBadge } from './components/TopBar.tsx';
-import { cx, Panel, SidePanelProvider } from './components/ui.tsx';
+import { cx, SidePanelProvider } from './components/ui.tsx';
 import { FinanceForm, Investice } from './pages/Finance.tsx';
 import { Ingest, type Unknown } from './pages/Ingest.tsx';
 import { Marketing } from './pages/Marketing.tsx';
@@ -88,7 +88,6 @@ function Drawer({ s, tab, setTab, onClose, pending }: { s: StateResponse; tab: s
 export function Shell({ s, online, lastOk, initialDrawer = null }: { s: StateResponse; online: boolean; lastOk: Date | null; initialDrawer?: string | null }) {
   const [drawer, setDrawer] = useState<string | null>(initialDrawer);
   const [pending, setPending] = useState<Unknown[]>([]);
-  const cards = s.snapshot.cards;
   const onUnknown = (res: IngestResult[], files: File[]) => {
     setPending(res.flatMap((r, i) => (r.ok ? [] : [{ ...r, source: files[i] }])));
     setDrawer('importy');
@@ -115,21 +114,13 @@ export function Shell({ s, online, lastOk, initialDrawer = null }: { s: StateRes
         </div>
       </header>
       <main className="space-y-4 p-4">
-        {cards.length > 0 && (
-          <section>
-            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-mute">{s.snapshot.clock.phase === 'pred-hrou' ? 'Startovní checklist' : 'Co udělat teď'}</h2>
-            <div className="space-y-2" data-testid="cards">
-              {cards.map((c) => (
-                <ActionCard key={c.id} card={c} />
-              ))}
-            </div>
-          </section>
-        )}
-        {s.snapshot.clock.phase !== 'pred-hrou' && cards.length === 0 && (
-          <Panel>
-            <div className="text-lg text-mute">Teď není nic naléhavého. Tabulky MD61 a VK32 níže jsou aktuální.</div>
-          </Panel>
-        )}
+        <Findings s={s} />
+        <Products s={s} />
+        <Market s={s} />
+        <div className="grid gap-4 xl:grid-cols-2">
+          <Channels s={s} />
+          <Plant s={s} />
+        </div>
         <div className="grid gap-4 xl:grid-cols-2">
           <Md61Table s={s} />
           <Vk32Table s={s} />

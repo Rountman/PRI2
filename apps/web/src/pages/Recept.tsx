@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { RawKey, Recipe } from '@copilot/config';
-import { cheapestRecipe, FLAVOR_RAW, formatRecipe, RAW_NAMES, unitCostFromBom, validateRecipe } from '@copilot/engine/bom';
+import { cheapestRecipe, FLAVOR_RAW, formatRecipe, RAW_NAMES, unitCostFromBom, unitCostSplit, validateRecipe } from '@copilot/engine/bom';
 import { fmtEUR, fmtNum, fmtPrice } from '@copilot/engine/format';
 import type { StateResponse } from '../api.ts';
 import { cx, Panel } from '../components/ui.tsx';
@@ -31,6 +31,7 @@ export function Recept({ s }: { s: StateResponse }) {
             <tr>
               <th>SKU</th>
               <th>aktuální</th>
+              <th className="text-right">obaly</th>
               <th className="text-right">unit cost</th>
               <th>nejlevnější</th>
               <th className="text-right">úspora/ks</th>
@@ -46,6 +47,7 @@ export function Recept({ s }: { s: StateResponse }) {
                 <tr key={r.sku} className="border-t border-line/60 align-top">
                   <td className="py-1 font-bold">{r.mat}</td>
                   <td>{formatRecipe(cfg.recipes[f] ?? {})}</td>
+                  <td className="text-right text-mute">{fmtPrice(unitCostSplit(r.sku, cfg, prices).packaging)}</td>
                   <td className="text-right">{fmtPrice(c0)}</td>
                   <td>{formatRecipe(best)}</td>
                   <td className="text-right text-good">{fmtPrice(c0 - c1)}</td>

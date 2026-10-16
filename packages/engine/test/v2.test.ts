@@ -4,8 +4,8 @@ import { analyze } from '../src/analysis/index.ts';
 import { buildSnapshot } from '../src/engine.ts';
 import { emptyDataset, type ActionCard, type Dataset } from '../src/types.ts';
 import { selectCards } from '../src/v2/cards.ts';
-import { setupMarginalTable } from '../src/v2/invest.ts';
-import { cutLots } from '../src/v2/lotsize.ts';
+import { loanAdvice, setupMarginalTable } from '../src/v2/invest.ts';
+import { cutLots, fitLots } from '../src/v2/lotsize.ts';
 import { buildModel, dailyDemand } from '../src/v2/model.ts';
 import { clockOf } from '../src/phase.ts';
 import { assortmentReview } from '../src/v2/assortment.ts';
@@ -39,7 +39,26 @@ describe('lot size (guide table)', () => {
     [0, []],
     [-5, []],
     [100_000, [48_000, 48_000, 16_000]],
+  ])('%d → %j', (q, lots) => expect(cutLots(q, { ...ext, lotRounding: 1_000 })).toEqual(lots));
+});
+
+describe('lot size in packs of 16 000 / 48 000 (live game, preset extended)', () => {
+  it.each([
+    [1, [16_000]],
+    [16_000, [16_000]],
+    [16_001, [16_000, 16_000]],
+    [32_000, [16_000, 16_000]],
+    [40_000, [48_000]],
+    [48_001, [48_000, 16_000]],
+    [100_000, [48_000, 48_000, 16_000]],
+    [0, []],
   ])('%d → %j', (q, lots) => expect(cutLots(q, ext)).toEqual(lots));
+
+  it('fitLots rounds down to packs (capacity / storage cuts)', () => {
+    expect(fitLots(15_999, ext)).toEqual([]);
+    expect(fitLots(47_999, ext)).toEqual([16_000, 16_000]);
+    expect(fitLots(70_000, ext)).toEqual([48_000, 16_000]);
+  });
 });
 
 describe('Před hrou (no data)', () => {
@@ -59,23 +78,23 @@ describe('Před hrou (no data)', () => {
     expect(text).not.toMatch(/0 prodejů|bez prodejů|Nahraj [A-Z]/);
   });
 
-  it('MD61 first cycle broad: 8 SKUs, 1 kg × 24 000, 500 g × 16 000, fits storage, cash and capacity', () => {
+  it('MD61 first cycle broad: 8 SKUs × one 16 000 pack, fits storage, cash and capacity', () => {
     expect(s.md61.rows.map((r) => [r.sku, r.forecast])).toEqual([
       ['F01', 16_000],
       ['F02', 16_000],
       ['F03', 16_000],
       ['F04', 16_000],
-      ['F11', 24_000],
-      ['F12', 24_000],
-      ['F13', 24_000],
-      ['F14', 24_000],
+      ['F11', 16_000],
+      ['F12', 16_000],
+      ['F13', 16_000],
+      ['F14', 16_000],
     ]);
-    expect(s.md61.materials.rawKg).toBe(128_000);
-    expect(s.md61.materials.packaging).toBe(320_000);
+    expect(s.md61.materials.rawKg).toBe(96_000);
+    expect(s.md61.materials.packaging).toBe(256_000);
     expect(s.md61.materials.cost).toBeGreaterThan(150_000);
     expect(s.md61.materials.cost).toBeLessThan(400_000);
     expect(s.md61.materials.ok).toBe(true);
-    expect(s.md61.capacity.units).toBe(160_000);
+    expect(s.md61.capacity.units).toBe(128_000);
     expect(s.md61.capacity.setups).toBe(8);
     expect(s.md61.capacity.used).toBeLessThanOrEqual(s.md61.capacity.available);
   });
@@ -103,7 +122,7 @@ describe('team code (SAP material GG-F01)', () => {
   it('preset GG → all SAP texts use GG-Fxx', () => {
     const s = buildSnapshot(emptyDataset(), ext);
     expect(s.md61.rows.map((r) => r.mat)).toEqual(['GG-F01', 'GG-F02', 'GG-F03', 'GG-F04', 'GG-F11', 'GG-F12', 'GG-F13', 'GG-F14']);
-    expect(s.cards[0].title).toBe('1. Sortiment 1. kola: GG-F01, GG-F02, GG-F03, GG-F04, GG-F11, GG-F12, GG-F13, GG-F14');
+    expect(s.cards[0].title).toBe('Sortiment 1. kola: GG-F01, GG-F02, GG-F03, GG-F04, GG-F11, GG-F12, GG-F13, GG-F14');
     expect(s.cards.find((c) => c.id === 'start:5-md61')!.copyValues![0]).toEqual({ label: 'GG-F01', value: '16000' });
     expect(s.vk32.rows[0].mat).toBe('GG-F01');
   });
@@ -124,7 +143,7 @@ describe('assortment: broad in round 1, best 5 after round 1', () => {
     expect(rv.keep.some((s) => s.startsWith('F1'))).toBe(true);
     expect(rv.keep.some((s) => s.startsWith('F0'))).toBe(true);
     expect(rv.keep).toEqual(expect.arrayContaining(['F12', 'F13']));
-    expect([...rv.keep, ...rv.drop].sort()).toEqual([...cfg.assortmentPool].sort());
+    expect([...rv.keep, ...rv.drop].sort()).toEqual([...cfg.assortment].sort());
   });
 
   it('dropped SKUs get MD61 = 0 and no lots; card in Mezi koly lists MD61 = 0', () => {
@@ -145,6 +164,87 @@ describe('assortment: broad in round 1, best 5 after round 1', () => {
     const s = buildSnapshot(fixtureDataset(), resolveConfig({ preset: 'intro', assortmentAuto: false }));
     expect(s.assortment.current).toEqual(resolveConfig({ preset: 'intro' }).assortment);
     expect(s.md61.rows.every((r) => !r.dropped)).toBe(true);
+  });
+});
+
+describe('assortment review uses only the ticked SKUs', () => {
+  it('team GG: 6 ticked (no F12, F14) → keeps 5 of those 6, never F12/F14', () => {
+    const six = resolveConfig({ preset: 'intro', assortment: ['F01', 'F02', 'F03', 'F04', 'F11', 'F13'] });
+    const rv = assortmentReview(fixtureDataset(), six, analyze(fixtureDataset(), six))!;
+    expect(rv.keep).toHaveLength(5);
+    expect(rv.drop).toHaveLength(1);
+    expect([...rv.keep, ...rv.drop]).not.toContain('F12');
+    expect([...rv.keep, ...rv.drop]).not.toContain('F14');
+  });
+
+  it('exactly 5 ticked → nothing to drop, no assortment card', () => {
+    const five = resolveConfig({ preset: 'intro', assortment: ['F02', 'F03', 'F11', 'F12', 'F13'] });
+    const s = buildSnapshot(fixtureDataset(), five, { clock: { gameDay: 20 } });
+    expect(s.assortment.review!.drop).toEqual([]);
+    expect(s.cards.some((c) => c.kind === 'sortiment')).toBe(false);
+  });
+});
+
+describe('marketing (ZADS) per product × region', () => {
+  it('before the game: 3 regions per SKU, 500 g (DC 14, vysoká) full amount, 1 kg (DC 12, střední) half', () => {
+    const rows = buildSnapshot(emptyDataset(), ext).marketing;
+    expect(rows).toHaveLength(ext.assortment.length * 3);
+    const f01 = rows.filter((r) => r.sku === 'F01');
+    expect(f01.map((r) => r.area)).toEqual(['N', 'S', 'W']);
+    expect(f01.every((r) => r.sensitivity === 'vysoká' && r.eurPerDay === ext.marketingEurPerRegionDay)).toBe(true);
+    expect(rows.filter((r) => r.sku === 'F11').every((r) => r.sensitivity === 'střední' && r.eurPerDay === ext.marketingEurPerRegionDay / 2)).toBe(true);
+  });
+
+  it('with data: symbolic amount only in the key region of products in stock, 0 elsewhere', () => {
+    const c = resolveConfig({ preset: 'intro', assortmentAuto: false });
+    const rows = buildSnapshot(fixtureDataset(), c).marketing;
+    for (const sku of new Set(rows.map((r) => r.sku))) {
+      const rs = rows.filter((r) => r.sku === sku);
+      expect(rs).toHaveLength(3);
+      expect(rs.filter((r) => r.eurPerDay > 0).length).toBeLessThanOrEqual(1);
+      for (const r of rs) expect(r.eurPerDay).toBeLessThanOrEqual(c.marketingEurPerRegionDay);
+    }
+  });
+
+  it('marketingEurPerRegionDay = 0 → marketing off everywhere', () => {
+    const rows = buildSnapshot(fixtureDataset(), resolveConfig({ preset: 'intro', marketingEurPerRegionDay: 0 })).marketing;
+    expect(rows.every((r) => r.eurPerDay === 0 && !r.advise)).toBe(true);
+  });
+});
+
+describe('market overview (ZMARKET) and products we do not make', () => {
+  const six = resolveConfig({ preset: 'intro', assortment: ['F01', 'F02', 'F03', 'F04', 'F11', 'F13'] });
+  it('lists all products of the latest window, sorted by revenue, produced flag', () => {
+    const mo = buildSnapshot(fixtureDataset(), six).status.market!;
+    expect(mo.rows.length).toBeGreaterThanOrEqual(8); // every product sold by anyone in the window (Original/Mixed only when someone sells them)
+    for (let i = 1; i < mo.rows.length; i++) expect(mo.rows[i - 1].revenue).toBeGreaterThanOrEqual(mo.rows[i].revenue);
+    expect(mo.rows.find((r) => r.sku === 'F12')!.produced).toBe(false);
+    expect(mo.rows.reduce((a, r) => a + r.revenueShare, 0)).toBeCloseTo(1, 6);
+  });
+
+  it('recommends a strong product we do not make (F12) – as advice, assortment unchanged', () => {
+    const s = buildSnapshot(fixtureDataset(), six);
+    const rec = s.cards.find((c) => c.id.startsWith('market:missed:F12'))!;
+    expect(rec.title).toMatch(/^Zvážit zařazení GG-F12 do sortimentu místo GG-F0/);
+    expect(rec.observation).toMatch(/GG-F12 má .* tržeb trhu .* a my ho nevyrábíme/);
+    expect(s.assortment.current).not.toContain('F12');
+  });
+
+  it('nothing before the game or without ZMARKET', () => {
+    expect(buildSnapshot(emptyDataset(), ext).status.market).toBeNull();
+    expect(buildSnapshot(only(['InventoryReport.xlsx', 'SalesReport.xlsx']), six).status.market).toBeNull();
+  });
+});
+
+describe('loan repayment reserve', () => {
+  it('reserve = cash fixed costs (no depreciation) × days + buffer + (AP − AR if positive)', () => {
+    // real game GG day 41: cash 434k, AR 2,09M, AP 373k, loan 6,89M
+    const l = loanAdvice(ext, { cash: 434_189.73, loan: 6_890_000, payables: 372_998.1, receivables: 2_092_522, remainingDays: 59 });
+    const cashFixed = (20_000 + 15_000 + 40_000) / 5 + 6.89 * ext.interestPerDayPerM;
+    expect(l.reserve).toBeCloseTo(cashFixed * 10 + 200_000, 2);
+    expect(l.repay).toBe(60_000);
+    // suppliers not covered by customers raise the reserve
+    expect(loanAdvice(ext, { cash: 434_189.73, loan: 6_890_000, payables: 900_000, receivables: 500_000, remainingDays: 59 }).repay).toBe(0);
   });
 });
 
@@ -177,6 +277,66 @@ describe('demand (5.1)', () => {
   });
 });
 
+describe('MD61 values in packs (live game)', () => {
+  it('every MD61 value is a multiple of 16 000 and MD01 gives exactly the shown lots', () => {
+    const sale = (gameDay: number, material: string, quantity: number) => ({
+      round: 1, day: gameDay, gameDay, area: 'N', location: '02', dc: '12', material, teamCode: 'GG', description: '', netPrice: 5.2, quantity, netValue: quantity * 5.2, cost: quantity * 1.5,
+    });
+    const inv = (material: string, stock: number) => ({ location: '02', category: 'Finished Goods', material, teamCode: 'GG', description: '', stock, reserved: 0, unit: 'ST' });
+    const ds = { ...emptyDataset(), sales: [sale(4, 'F01', 9_000), sale(5, 'F02', 7_000), sale(5, 'F03', 6_000)], inventory: [inv('F01', 28_049), inv('F02', 3_500), inv('F03', 200_000)] } as Dataset;
+    const c = resolveConfig({ assortment: ['F01', 'F02', 'F03'], assortmentAuto: false });
+    const s = buildSnapshot(ds, c);
+    for (const r of s.md61.rows) {
+      expect(r.forecast % 16_000).toBe(0);
+      expect(cutLots(r.forecast - r.stock - r.wip, c).reduce((a, x) => a + x, 0)).toBe(r.planned);
+    }
+    expect(s.md61.rows.find((r) => r.sku === 'F03')!.forecast).toBe(0); // covered by stock
+  });
+});
+
+describe('assortment SKU without sales in the window', () => {
+  it('sold out / newly added → demand from our share of its market, not 0', () => {
+    const sale = (gameDay: number, material: string, quantity: number) => ({
+      round: 1, day: gameDay, gameDay, area: 'N', location: '02', dc: '12', material, teamCode: 'GG', description: '', netPrice: 6, quantity, netValue: quantity * 6, cost: quantity * 1.5,
+    });
+    const mk = (material: string, quantity: number) => ({ round: 1, day: 10, gameDay: 10, material, description: '', area: 'N', price: 6, quantity, value: quantity * 6 });
+    const ds = { ...emptyDataset(), sales: [sale(9, 'F03', 10_000), sale(10, 'F03', 10_000)], market: [mk('F03', 100_000), mk('F01', 50_000)] } as Dataset;
+    const c = resolveConfig({ assortment: ['F01', 'F03'], assortmentAuto: false });
+    const m = buildModel(ds, c, analyze(ds, c));
+    expect(m.demand.F01.source).toBe('trh');
+    expect(m.demand.F01.perDay).toBeCloseTo((50_000 / 5) * 0.2, 6); // our share 20k / 100k
+    expect(buildSnapshot(ds, c).md61.rows.find((r) => r.sku === 'F01')!.planned).toBeGreaterThan(0);
+  });
+});
+
+describe('team demand cap (SKUs share the same customers)', () => {
+  // real game GG round 1: one 500 g SKU on the shelf at a time, each sells ~13k/day, but the team sells ~13k/day in total
+  const sale = (gameDay: number, material: string, quantity: number) => ({
+    round: 1, day: gameDay, gameDay, area: 'N', location: '02', dc: '12', material, teamCode: 'GG', description: '', netPrice: 5.2, quantity, netValue: quantity * 5.2, cost: quantity * 1.5,
+  });
+  const ds = { ...emptyDataset(), sales: [sale(1, 'F01', 13_000), sale(2, 'F02', 13_000), sale(3, 'F03', 13_000), sale(4, 'F04', 13_000), sale(5, 'F01', 13_000)] } as Dataset;
+  const c = resolveConfig({ assortment: ['F01', 'F02', 'F03', 'F04'], assortmentAuto: false });
+
+  it('Σ per-SKU demand is scaled to the team total × boost', () => {
+    const m = buildModel(ds, c, analyze(ds, c));
+    expect(m.teamDemand?.perDay).toBe(13_000);
+    const total = ['F01', 'F02', 'F03', 'F04'].reduce((a, s) => a + m.demand[s].perDay, 0);
+    expect(total).toBeCloseTo(13_000 * c.md61.stockoutBoost, 6);
+    expect(m.demand.F01.capFactor).toBeLessThan(1);
+    // MD61 for 10 days ≈ team total, not 4 × 13k
+    const s = buildSnapshot(ds, c);
+    expect(s.md61.rows.reduce((a, r) => a + r.forecast, 0)).toBeLessThanOrEqual(13_000 * 1.2 * s.md61.horizon + 4 * c.lotMax);
+  });
+
+  it('small raw storage cuts the plan (lowest margin first) instead of only warning', () => {
+    const tiny = resolveConfig({ assortment: ['F01', 'F02', 'F03', 'F04'], assortmentAuto: false, storage: { finishedGoods: 250_000, raw: 30_000, packaging: 750_000 } });
+    const s = buildSnapshot(ds, tiny);
+    expect(s.md61.materials.cut.length).toBeGreaterThan(0);
+    expect(s.md61.materials.rawPeak).toBeLessThanOrEqual(30_000);
+    expect(s.md61.materials.ok).toBe(true);
+  });
+});
+
 function check(ds: Dataset) {
   const s = buildSnapshot(ds, cfg);
   expect(s.errors).toEqual([]);
@@ -187,13 +347,17 @@ function check(ds: Dataset) {
       expect(l).toBeGreaterThanOrEqual(cfg.lotMin);
       expect(l).toBeLessThanOrEqual(cfg.lotMax);
     }
-    expect(r.lots).toEqual(cutLots(r.forecast - r.stock - r.wip, cfg));
-    expect(r.forecast % 1000).toBe(0);
+    if (r.lots.length) expect(r.lots).toEqual(cutLots(r.forecast - r.stock - r.wip, cfg));
+    else expect(cutLots(r.forecast - r.stock - r.wip, cfg)).toEqual([]);
+    expect(r.forecast % (cfg.lotRounding === cfg.lotMin ? cfg.lotMin : 1000)).toBe(0);
   }
+  // raw/packaging storage after ME59N deliveries never over the limit
+  expect(s.md61.materials.rawPeak).toBeLessThanOrEqual(cfg.storage.raw);
+  expect(s.md61.materials.packagingPeak).toBeLessThanOrEqual(cfg.storage.packaging);
   // prices never below unit cost
   for (const r of s.vk32.rows) for (const c of r.cells) expect(c.recommended).toBeGreaterThanOrEqual(r.unitCost);
   // max 5 cards, max 2 critical
-  expect(s.cards.length).toBeLessThanOrEqual(5);
+  expect(s.cards.length).toBeLessThanOrEqual(cfg.maxCards);
   expect(s.cards.filter((c) => c.priority === 'kritické').length).toBeLessThanOrEqual(2);
   return s;
 }
@@ -255,7 +419,7 @@ describe('fixtures (intro preset)', () => {
 });
 
 describe('card selection', () => {
-  const mk = (id: string, priority: ActionCard['priority'], profit: number): ActionCard => ({ id, kind: 'x', priority, title: id, profitEUR: profit, tcode: 'X', steps: [], why: { summary: '', data: [], rule: '', confidence: 'odhad' } });
+  const mk = (id: string, priority: ActionCard['priority'], profit: number): ActionCard => ({ id, kind: 'x', priority, observation: id, title: id, profitEUR: profit, tcode: 'X', steps: [], why: { summary: '', data: [], rule: '', confidence: 'odhad' } });
   it('max 5, max 2 critical, critical first then by €', () => {
     const out = selectCards([mk('a', 'kritické', 1), mk('b', 'kritické', 50), mk('c', 'kritické', 30), mk('d', 'běžné', 100), mk('e', 'běžné', 5), mk('f', 'běžné', 2), mk('g', 'běžné', 1)], 5, 2);
     expect(out.map((c) => c.id)).toEqual(['b', 'c', 'd', 'e', 'f']);
