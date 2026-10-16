@@ -103,7 +103,7 @@ describe('team code (SAP material GG-F01)', () => {
   it('preset GG → all SAP texts use GG-Fxx', () => {
     const s = buildSnapshot(emptyDataset(), ext);
     expect(s.md61.rows.map((r) => r.mat)).toEqual(['GG-F01', 'GG-F02', 'GG-F03', 'GG-F04', 'GG-F11', 'GG-F12', 'GG-F13', 'GG-F14']);
-    expect(s.cards[0].title).toBe('1. Sortiment 1. kola: GG-F01, GG-F02, GG-F03, GG-F04, GG-F11, GG-F12, GG-F13, GG-F14');
+    expect(s.cards[0].title).toBe('Sortiment 1. kola: GG-F01, GG-F02, GG-F03, GG-F04, GG-F11, GG-F12, GG-F13, GG-F14');
     expect(s.cards.find((c) => c.id === 'start:5-md61')!.copyValues![0]).toEqual({ label: 'GG-F01', value: '16000' });
     expect(s.vk32.rows[0].mat).toBe('GG-F01');
   });
@@ -236,7 +236,7 @@ function check(ds: Dataset) {
   // prices never below unit cost
   for (const r of s.vk32.rows) for (const c of r.cells) expect(c.recommended).toBeGreaterThanOrEqual(r.unitCost);
   // max 5 cards, max 2 critical
-  expect(s.cards.length).toBeLessThanOrEqual(5);
+  expect(s.cards.length).toBeLessThanOrEqual(cfg.maxCards);
   expect(s.cards.filter((c) => c.priority === 'kritické').length).toBeLessThanOrEqual(2);
   return s;
 }
@@ -298,7 +298,7 @@ describe('fixtures (intro preset)', () => {
 });
 
 describe('card selection', () => {
-  const mk = (id: string, priority: ActionCard['priority'], profit: number): ActionCard => ({ id, kind: 'x', priority, title: id, profitEUR: profit, tcode: 'X', steps: [], why: { summary: '', data: [], rule: '', confidence: 'odhad' } });
+  const mk = (id: string, priority: ActionCard['priority'], profit: number): ActionCard => ({ id, kind: 'x', priority, observation: id, title: id, profitEUR: profit, tcode: 'X', steps: [], why: { summary: '', data: [], rule: '', confidence: 'odhad' } });
   it('max 5, max 2 critical, critical first then by €', () => {
     const out = selectCards([mk('a', 'kritické', 1), mk('b', 'kritické', 50), mk('c', 'kritické', 30), mk('d', 'běžné', 100), mk('e', 'běžné', 5), mk('f', 'běžné', 2), mk('g', 'běžné', 1)], 5, 2);
     expect(out.map((c) => c.id)).toEqual(['b', 'c', 'd', 'e', 'f']);

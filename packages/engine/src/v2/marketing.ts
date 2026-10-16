@@ -3,6 +3,7 @@
 // the region where our market share is lowest gets +50 % (most room to grow).
 import type { Area, Sensitivity } from '@copilot/config';
 import { allowedDcs, type Model } from './model.ts';
+import { fmtNum } from '../format.ts';
 
 export type MarketingRow = {
   sku: string;
@@ -70,7 +71,7 @@ export function marketingTable(m: Model): MarketingRow[] {
               ? 'start: malá částka, sleduj prodeje'
               : area === weakest
                 ? 'nejnižší podíl na trhu – nejvíc prostoru růst (+50 %)'
-                : `zboží je (pokrytí ${cover === null ? '∞' : cover.toFixed(1)} dne)`,
+                : `zboží je (pokrytí ${cover === null ? '∞' : fmtNum(cover, 1)} dne)`,
       });
     }
   }

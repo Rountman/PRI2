@@ -7,6 +7,7 @@ import { pregameChecklist } from './v2/checklist.ts';
 import { avgMargin, capacityAdvice, changeoversPerRound, loanAdvice, setupMarginalTable, type CapacityAdvice, type LoanAdvice, type SetupStep } from './v2/invest.ts';
 import type { AssortmentReview } from './v2/assortment.ts';
 import { marketingTable, type MarketingRow } from './v2/marketing.ts';
+import { dcStatus, plantStatus, type DcRow, type PlantStatus } from './v2/status.ts';
 import { md61Plan, type Md61Plan } from './v2/md61.ts';
 import { buildModel } from './v2/model.ts';
 import { vk32Table, type Vk32Table } from './v2/vk32.ts';
@@ -21,6 +22,7 @@ export type Snapshot = {
   md61: Md61Plan;
   vk32: Vk32Table;
   marketing: MarketingRow[];
+  status: { dcs: DcRow[]; plant: PlantStatus };
   assortment: { current: string[]; review: AssortmentReview | null };
   invest: { loan: LoanAdvice; setup: SetupStep[]; capacity: CapacityAdvice; avgMargin: number; changeoversPerRound: number };
   analysis: Analysis; // for Rozšířené
@@ -66,6 +68,7 @@ export function buildSnapshot(ds: Dataset, cfg: GameConfig, opts: SnapshotOption
     md61,
     vk32,
     marketing: marketingTable(m),
+    status: { dcs: dcStatus(m), plant: plantStatus(m, md61) },
     assortment: { current: m.assortment, review: m.review },
     invest: {
       loan: loanAdvice(cfg, { cash: m.cash, loan: m.loan, rawNextCycle: md61.materials.cost, remainingDays: m.remainingDays }),

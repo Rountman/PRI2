@@ -71,7 +71,7 @@ Appka zobrazí **startovní checklist** v pořadí (každý bod = akční karta 
 7. Připomínka: **2. MRP cyklus spustit nejpozději den 4–5**, aby suroviny dorazily dřív, než doběhne 1. cyklus (lead time až 5 dní).
 
 ### 4.2 Během kola (data nahraná)
-Appka generuje max **5 akčních karet** seřazených podle dopadu v €. Z toho max 2 kritické (červené).
+Appka **hlásí stav, ne úkoly**: tabulka „Co se děje → doporučení“ (max 12 řádků, podle dopadu v €, max 2 červené), Přehled výrobků, Obchody (DC, 5 dní), Výroba a sklady, MD61, VK32. Žádné kroky ani ✓ – SAP hodnoty a postup jsou v detailu pod (?).
 
 ## 5. Výpočty (čisté funkce v `packages/engine`, každá s testem)
 ### 5.1 Poptávka per SKU
@@ -101,18 +101,18 @@ SKU vyprodaný · do konce výroby < lead time a není nový MRP cyklus · cena 
 ## 6. UI – JEDNA obrazovka
 ```
 ┌ ERPsim Copilot ─ [Před hrou | Kolo 2 · den 9/20] ─ Valuace 77,3M (A−) ─ [⬆ Drop xlsx] 🟢Sklad 🟢Prodeje 🟠Trh ─ [Rozšířené ▸] ┐
-│ CO UDĚLAT TEĎ (max 5 karet)                                                                                              │
-│  ▸ [KRITICKÉ] F12 dojde za 1,5 dne → MD61 F12 = 96 000   [kopírovat]   T-code MD61 → MD01 → ME59N        (?)  [✓]  │
-│  ▸ Zvedni cenu F03 v DC14 na 5,50 €                        [kopírovat]   VK32 · DC 14                        (?)  [✓]  │
+│ CO SE DĚJE → DOPORUČENÍ (max 12 řádků)                                                                                   │
+│  ● GG-F12 dojde za 1,5 dne (sklad 600, prodej 4 871/den)   │ Prognóza MD61 GG-F12 = 49 000            +157k €   (?)      │
+│    GG-F03: pokrytí 0,4 dne < 3                             │ Zvýšit cenu GG-F03: DC 12 5,20 → 5,50 €   +14k €   (?)      │
+│ PŘEHLED VÝROBKŮ · OBCHODY (DC) · VÝROBA A SKLADY                                                                          │
 ├─────────────────────────────── MD61 – PROGNÓZA ──────────┬──────────── VK32 – CENY ──────────────────────────────────┤
 │ SKU   sklad  dny  prognóza  → planned orders              │ SKU    DC10      DC12      DC14     trh                   │
 │ F12   12k    1,5  96 000   2× 48k                         │ F12    7,20 ↑    7,50 ↑     –       7,73                  │
 └───────────────────────────────────────────────────────────┴───────────────────────────────────────────────────────────┘
 ```
 - Tabulky MD61 a VK32 jsou **přesně ve tvaru, v jakém se zadávají do SAPu** (stejné pořadí materiálů jako v SAP formuláři). U každé hodnoty je kopírování kliknutím.
-- **Appka rozhoduje sama** – karty jsou jen příkazy s hodnotami (žádné „zvaž / rozhodni“). Důvody nejsou pod nadpisem karty, ale pod (?).
+- **Appka hlásí, co se děje, a doporučuje** (řádek = pozorování z dat + doporučení). Žádný seznam úkolů. Důvody a hodnoty pro SAP jsou pod (?).
 - (?) u každé karty i řádku: **hover = krátký důvod** (1 věta + klíčová čísla), **klik → boční panel**: proč, čísla, pravidlo, riziko, jistota (jisté / pravděpodobné / odhad).
-- [✓] odškrtnutí se sdílí přes SSE. Odškrtnutá karta zešedne.
 - **„Rozšířené ▸“** = šuplík/drawer zprava, záložky: Další importy · Investice (what-if) · Recept (BOM kalkulačka) · Marketing (ZADS) · Strategie (text) · Nastavení (preset, parametry, počet kol, sortiment, PIN).
 - Velké fonty, tmavý režim, čeština. Žádné modály. Nic se nepočítá na serveru déle než 200 ms.
 

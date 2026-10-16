@@ -28,7 +28,8 @@ describe('server', () => {
     const st = (await (await app.request('/api/state')).json()) as any;
     expect(st.snapshot.clock.gameDay).toBe(60);
     expect(st.snapshot.cards.length).toBeGreaterThan(3);
-    expect(st.snapshot.cards.length).toBeLessThanOrEqual(5);
+    expect(st.snapshot.cards.length).toBeLessThanOrEqual(12);
+    expect(st.snapshot.status.dcs.map((d: any) => d.dc)).toEqual(['10', '12', '14']);
     expect(st.snapshot.md61.rows.length).toBeGreaterThan(0);
     expect(Object.keys(st.imports).sort()).toEqual(['inventory', 'market', 'production', 'purchases', 'sales', 'sourcing', 'summary', 'valuation']);
     expect(st.inventoryGameDay).toBe(60);

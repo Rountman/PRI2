@@ -87,7 +87,7 @@ exports[`preset extended (CLAUDE.md kap. 2) > snapshot 1`] = `
   "lotMin": 16000,
   "lotRounding": 1000,
   "marketingEurPerRegionDay": 1000,
-  "maxCards": 5,
+  "maxCards": 12,
   "maxCritical": 2,
   "md61": {
     "changeoversPerRound": 10,

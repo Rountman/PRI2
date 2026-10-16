@@ -70,7 +70,7 @@ const EXTENDED: GameConfig = {
   pricing: { step: 0.3, lowCoverDays: 3, highCoverDays: 8, anchorFloorPct: 10, warnFixedPerUnit: true },
   reserve: { fixedDays: 10, buffer: 200_000 },
   investPayback: 2,
-  maxCards: 5,
+  maxCards: 12, // rows in the 'Co se děje' table
   maxCritical: 2,
 
   marketingEurPerRegionDay: 1_000,
