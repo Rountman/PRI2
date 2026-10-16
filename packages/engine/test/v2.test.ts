@@ -166,6 +166,30 @@ describe('assortment review uses only the ticked SKUs', () => {
   });
 });
 
+describe('marketing (ZADS) per product × region', () => {
+  it('before the game: 3 regions per SKU, 500 g (DC 14, vysoká) full amount, 1 kg (DC 12, střední) half', () => {
+    const rows = buildSnapshot(emptyDataset(), ext).marketing;
+    expect(rows).toHaveLength(ext.assortment.length * 3);
+    const f01 = rows.filter((r) => r.sku === 'F01');
+    expect(f01.map((r) => r.area)).toEqual(['N', 'S', 'W']);
+    expect(f01.every((r) => r.sensitivity === 'vysoká' && r.eurPerDay === ext.marketingEurPerRegionDay)).toBe(true);
+    expect(rows.filter((r) => r.sku === 'F11').every((r) => r.sensitivity === 'střední' && r.eurPerDay === ext.marketingEurPerRegionDay / 2)).toBe(true);
+  });
+
+  it('with data: no stock → 0 in every region; otherwise the region with the lowest share gets +50 %', () => {
+    const rows = buildSnapshot(fixtureDataset(), resolveConfig({ preset: 'intro', assortmentAuto: false })).marketing;
+    for (const sku of new Set(rows.map((r) => r.sku))) {
+      const rs = rows.filter((r) => r.sku === sku);
+      expect(rs).toHaveLength(3);
+      if (!rs[0].advise) expect(rs.every((r) => r.eurPerDay === 0)).toBe(true);
+      else if (rs.every((r) => r.share !== null)) {
+        const weakest = [...rs].sort((a, b) => a.share! - b.share!)[0];
+        expect(weakest.eurPerDay).toBeGreaterThan(Math.min(...rs.map((r) => r.eurPerDay)));
+      }
+    }
+  });
+});
+
 describe('setup marginal table', () => {
   it('stops at the first step below payback', () => {
     const t = setupMarginalTable(ext, { currentSpend: 0, changeoversPerRound: 10, marginPerUnit: 4.5, remainingRounds: 4 });
