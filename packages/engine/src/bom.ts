@@ -57,6 +57,30 @@ export function bomFor(sku: string, cfg: GameConfig, recipe: Recipe = cfg.recipe
   return lines;
 }
 
+/**
+ * BOM in the order and units of the SAP ZCS02 screen (verified on the live game, plant G2):
+ * 0010 bag, 0020 box (1 ST each), 0030 oats, 0040 wheat, 0050+ flavor (KG).
+ */
+export function sapBom(sku: string, cfg: GameConfig, recipe?: Recipe): BomLine[] {
+  const [box, bag] = packagingFor(sku);
+  const lines = bomFor(sku, cfg, recipe);
+  const order = (m: string) => (m === bag ? 0 : m === box ? 1 : m === OATS ? 2 : m === WHEAT ? 3 : 4 + Number(m.slice(1)) / 100);
+  return [...lines].sort((a, b) => order(a.material) - order(b.material));
+}
+
+export type UnitCostSplit = { raw: number; packaging: number; total: number };
+
+export function unitCostSplit(sku: string, cfg: GameConfig, prices: PriceList, recipe?: Recipe): UnitCostSplit {
+  let raw = 0;
+  let packaging = 0;
+  for (const l of bomFor(sku, cfg, recipe)) {
+    const c = l.qty * prices[l.material].price;
+    if (l.unit === 'ST') packaging += c;
+    else raw += c;
+  }
+  return { raw, packaging, total: raw + packaging };
+}
+
 export function recipeCostPerKg(recipe: Recipe, prices: PriceList): number {
   return Object.entries(recipe).reduce((a, [m, share]) => a + (share ?? 0) * prices[m as RawKey].price, 0);
 }

@@ -26,7 +26,7 @@ Nejlepší poměr cena/výkon v tlaku soutěže: **nahraj max 3 xlsx → appka �
 | Dodavatelé | V01, V02. Lead time 1–5 dní, splatnost 20 dní. **Ceny surovin se mění každých 5 dní** |
 | Trh / tým / týden [JISTÉ – job aid Extended] | DC10 Hypermarkety €90k (jen 1 kg, cena velmi citlivá, reklama málo, splatnost 20 dní), DC12 Grocery €220k (obě balení, cena citlivá, reklama středně, 10–20 dní), DC14 Independent €130k (jen 500 g, cena středně, reklama hodně, 1–20 dní). Celkem ≈ €440k/týden ≈ €88k/den ≈ 14k ks/den → úzké hrdlo je spíš prodej než kapacita |
 | Recepty (minima) | ≥20 % wheat, ≥30 % oat, ≥20 % příchuť (Nut/Blueberry/Strawberry/Raisin), Mixed ≥30 % fruits&nuts (od každého něco), Original bez příchuti. 1 krabice + 1 sáček |
-| Výchozí BOM [JISTÉ – ověřeno na cvičných datech] | 35 % oat / 35 % wheat / 30 % příchuť. 500 g = 0,175/0,175/0,150 kg, 1 kg dvojnásobek |
+| Výchozí BOM [JISTÉ – cvičná data + ostrá hra ZCS02, závod G2] | 35 % oat (R06) / 35 % wheat (R05) / 30 % příchuť (R01 nuts, R02 blueberries, R03 strawberries, R04 raisins). 500 g = 0,175/0,175/0,150 kg + Small Bag P04 + Small Box P03; 1 kg = 0,350/0,350/0,300 kg + Large Bag P02 + Large Box P01. Test `packages/engine/test/bom.test.ts` |
 | Valuace | `((Profit − Setup)/Kola × 12 + Setup) / (7 % + riziková přirážka)`. Rating z `DebtLoading = Cash + AR − Loan − AP` (tabulka v archivu kap. 2). **Start: −6M → A− → 12,25 %** |
 | Počet kol | **5** [JISTÉ – potvrzeno týmem] |
 

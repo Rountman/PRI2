@@ -1,7 +1,7 @@
 // 4.1 "Před hrou" – start checklist from the preset only (no data needed).
-import { formatRecipe } from '../bom.ts';
+import { PACK_NAMES, RAW_NAMES, sapBom, unitCostSplit } from '../bom.ts';
 import { fmtEUR, fmtNum, fmtPrice, sapValue } from '../format.ts';
-import { skuFlavor, skuLabel } from '../normalize.ts';
+import { skuLabel } from '../normalize.ts';
 import type { ActionCard } from '../types.ts';
 import { avgMargin, setupMarginalTable } from './invest.ts';
 import type { Md61Plan } from './md61.ts';
@@ -48,17 +48,28 @@ export function pregameChecklist(m: Model, md61: Md61Plan, vk32: Vk32Table): Act
       id: 'start:2-recept',
       kind: 'checklist',
       priority: 'kritické',
-      title: '2. ZCS02 recept: 35 / 35 / 30 – nech beze změny',
+      title: '2. ZCS02 kusovník: nech beze změny (35 / 35 / 30 + krabice a sáček)',
       tcode: 'ZCS02',
       deadline: 'před prvním MD01',
       steps: [
-        ...skus.map((s) => `${m.mat(s)}: ${formatRecipe(cfg.recipes[skuFlavor(s)] ?? {})}`),
+        ...skus.map(
+          (s) =>
+            `${m.mat(s)}: ${sapBom(s, cfg)
+              .map((l) => `${m.mat(l.material)} ${l.unit === 'ST' ? `${l.qty} ks` : `${fmtNum(l.qty, 3)} kg`}`)
+              .join(' · ')}`,
+        ),
       ],
       why: {
         summary: 'Po první výrobě je recept zamčený. Nevalidní BOM = produkt se neprodá.',
         data: [
           { label: 'Minima', value: `oat ≥ ${cfg.recipeMin.oats * 100} %, wheat ≥ ${cfg.recipeMin.wheat * 100} %, příchuť ≥ ${cfg.recipeMin.flavor * 100} %` },
-          { label: 'Výchozí BOM 500 g', value: '0,175 / 0,175 / 0,150 kg' },
+          ...skus.slice(0, 1).flatMap((s) => {
+            const c = unitCostSplit(s, cfg, m.a.prices);
+            return [{ label: `Náklad ${m.mat(s)}`, value: `suroviny ${fmtPrice(c.raw)} + obaly ${fmtPrice(c.packaging)} = ${fmtPrice(c.total)}` }];
+          }),
+          { label: 'Obaly', value: `500 g: ${PACK_NAMES.P04} + ${PACK_NAMES.P03} · 1 kg: ${PACK_NAMES.P02} + ${PACK_NAMES.P01}` },
+          { label: 'Příchutě', value: `R01 ${RAW_NAMES.R01}, R02 ${RAW_NAMES.R02}, R03 ${RAW_NAMES.R03}, R04 ${RAW_NAMES.R04}` },
+          { label: 'Ověřeno', value: 'ostrá hra, ZCS02, závod G2' },
           { label: 'Zámek', value: '> 1 000 ks skladem nebo výrobní zakázky → ZCS02 nejde' },
         ],
         rule: '4.1 Recept / guide kap. 5',
