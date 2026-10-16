@@ -211,7 +211,7 @@ export function Nastaveni({ s }: { s: StateResponse }) {
           <button className="rounded-lg border border-line px-3 py-1 hover:border-accent" onClick={() => void api.setClock({ ...s.clock, gameDay: clockDay ? Number(clockDay) : null })}>
             Použít
           </button>
-          <span className="text-sm text-mute">Fázi přepneš nahoře vedle názvu fáze.</span>
+          <span className="text-sm text-mute">Herní den platí pro celý tým. Fázi si každý přepíná sám nahoře.</span>
         </div>
       </Panel>
 

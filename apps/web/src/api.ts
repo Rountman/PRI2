@@ -42,7 +42,7 @@ const json = (method: string, body: unknown): RequestInit => ({ method, headers:
 export const api = {
   auth: () => req<{ required: boolean; ok: boolean }>('/api/auth'),
   login: (pin: string) => req<{ ok: boolean }>('/api/login', json('POST', { pin })),
-  state: () => req<StateResponse>('/api/state'),
+  state: (phase?: string | null) => req<StateResponse>(phase ? `/api/state?phase=${encodeURIComponent(phase)}` : '/api/state'),
   ingest: (files: File[], gameDay?: number | null) => {
     const fd = new FormData();
     for (const f of files) fd.append('files', f, f.name);

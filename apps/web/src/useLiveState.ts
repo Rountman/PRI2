@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Phase } from '@copilot/engine';
 import { api, AuthError, type StateResponse } from './api.ts';
 
 export type Live = {
@@ -8,7 +9,20 @@ export type Live = {
   needPin: boolean;
   refresh: () => Promise<void>;
   error: string | null;
+  /** phase forced in THIS browser only (null = from data) – other viewers are not affected */
+  phase: Phase | null;
+  setPhase: (p: Phase | null) => void;
 };
+
+const PHASE_KEY = 'copilot.phase';
+function loadPhase(): Phase | null {
+  try {
+    const v = localStorage.getItem(PHASE_KEY);
+    return v === 'pred-hrou' || v === 'kolo' || v === 'mezi-koly' ? v : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Server state + SSE change notifications with exponential-backoff reconnect. */
 export function useLiveState(): Live {
@@ -18,10 +32,12 @@ export function useLiveState(): Live {
   const [needPin, setNeedPin] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const version = useRef(0);
+  const [phase, setPhaseState] = useState<Phase | null>(loadPhase);
+  const phaseRef = useRef<Phase | null>(phase);
 
   const refresh = useCallback(async () => {
     try {
-      const s = await api.state();
+      const s = await api.state(phaseRef.current);
       version.current = s.version;
       setState(s);
       setLastOk(new Date());
@@ -67,5 +83,20 @@ export function useLiveState(): Live {
     };
   }, [refresh]);
 
-  return { state, online, lastOk, needPin, refresh, error };
+  const setPhase = useCallback(
+    (p: Phase | null) => {
+      phaseRef.current = p;
+      setPhaseState(p);
+      try {
+        if (p) localStorage.setItem(PHASE_KEY, p);
+        else localStorage.removeItem(PHASE_KEY);
+      } catch {
+        /* private mode – the choice lasts until reload */
+      }
+      void refresh();
+    },
+    [refresh],
+  );
+
+  return { state, online, lastOk, needPin, refresh, error, phase, setPhase };
 }

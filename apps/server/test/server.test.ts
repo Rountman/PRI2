@@ -110,13 +110,17 @@ describe('server', () => {
     await app.request('/api/config', { method: 'PUT', body: JSON.stringify({ preset: 'intro', assortment: ['F01'] }), headers: j });
     st = (await (await app.request('/api/state')).json()) as any;
     expect(st.config.assortment).toEqual(['F01']);
-    await app.request('/api/clock', { method: 'PUT', body: JSON.stringify({ phase: 'mezi-koly' }), headers: j });
+    // phase is per viewer: one browser looks at "Před hrou", the others keep the phase from data
+    const mine = (await (await app.request('/api/state?phase=pred-hrou')).json()) as any;
+    expect(mine.snapshot.clock.phase).toBe('pred-hrou');
+    expect(mine.snapshot.cards).toHaveLength(7);
+    const theirs = (await (await app.request('/api/state')).json()) as any;
+    expect(theirs.snapshot.clock.phase).toBe('mezi-koly'); // fixtures end on day 60 = round 3 day 20
+    expect(((await (await app.request('/api/state?phase=kolo')).json()) as any).snapshot.clock.phase).toBe('kolo');
+    // the old shared switch no longer changes anyone's phase; only the game day is shared
+    await app.request('/api/clock', { method: 'PUT', body: JSON.stringify({ phase: 'pred-hrou', gameDay: 59 }), headers: j });
     st = (await (await app.request('/api/state')).json()) as any;
-    expect(st.snapshot.clock.phase).toBe('mezi-koly');
-    await app.request('/api/clock', { method: 'PUT', body: JSON.stringify({ phase: 'pred-hrou' }), headers: j });
-    st = (await (await app.request('/api/state')).json()) as any;
-    expect(st.snapshot.clock.phase).toBe('pred-hrou');
-    expect(st.snapshot.cards).toHaveLength(7);
+    expect(st.snapshot.clock).toMatchObject({ phase: 'kolo', gameDay: 59 });
   });
 
   it('reset requires confirmation', async () => {
