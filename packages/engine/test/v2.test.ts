@@ -195,18 +195,20 @@ describe('marketing (ZADS) per product × region', () => {
     expect(rows.filter((r) => r.sku === 'F11').every((r) => r.sensitivity === 'střední' && r.eurPerDay === ext.marketingEurPerRegionDay / 2)).toBe(true);
   });
 
-  it('with data: no stock → 0 in every region; otherwise the region with the lowest share gets +50 %', () => {
-    const rows = buildSnapshot(fixtureDataset(), resolveConfig({ preset: 'intro', assortmentAuto: false })).marketing;
+  it('with data: symbolic amount only in the key region of products in stock, 0 elsewhere', () => {
+    const c = resolveConfig({ preset: 'intro', assortmentAuto: false });
+    const rows = buildSnapshot(fixtureDataset(), c).marketing;
     for (const sku of new Set(rows.map((r) => r.sku))) {
       const rs = rows.filter((r) => r.sku === sku);
       expect(rs).toHaveLength(3);
-      if (!rs[0].advise) expect(rs.every((r) => r.eurPerDay === 0)).toBe(true);
-      else if (rs.every((r) => r.share !== null)) {
-        const [lo, next] = [...rs].sort((a, b) => a.share! - b.share!);
-        if (lo.share! < next.share!) expect(lo.eurPerDay).toBeGreaterThan(next.eurPerDay);
-        else expect(new Set(rs.map((r) => r.eurPerDay)).size).toBe(1); // tie → nobody gets the boost
-      }
+      expect(rs.filter((r) => r.eurPerDay > 0).length).toBeLessThanOrEqual(1);
+      for (const r of rs) expect(r.eurPerDay).toBeLessThanOrEqual(c.marketingEurPerRegionDay);
     }
+  });
+
+  it('marketingEurPerRegionDay = 0 → marketing off everywhere', () => {
+    const rows = buildSnapshot(fixtureDataset(), resolveConfig({ preset: 'intro', marketingEurPerRegionDay: 0 })).marketing;
+    expect(rows.every((r) => r.eurPerDay === 0 && !r.advise)).toBe(true);
   });
 });
 

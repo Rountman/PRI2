@@ -1,6 +1,7 @@
 // ZADS suggestion for Rozšířené → Marketing. ZADS is planned per product × region (North / South / West),
-// so there is one row per SKU × region. Advertise only when the product's channels react to ads and stock is there;
-// the region where our market share is lowest gets +50 % (most room to grow).
+// so there is one row per SKU × region. Instructor feedback (round 2): marketing was 1,34 % of revenue and did not pay off
+// → only symbolic amounts (≈ 50–100 €/day), only for products in stock, only in the key region (largest market for
+// the product in the latest ZMARKET), everything else 0. `marketingEurPerRegionDay` = 0 switches it off.
 import type { Area, Sensitivity } from '@copilot/config';
 import { allowedDcs, type Model } from './model.ts';
 import { fmtNum } from '../format.ts';
@@ -45,14 +46,14 @@ export function marketingTable(m: Model): MarketingRow[] {
         if (mk > 0) share[ar] = Math.min(1, ours / mk);
       }
     }
-    const known = cfg.areas.filter((ar) => share[ar] !== undefined);
-    const sorted = [...known].sort((a, b) => share[a]! - share[b]!);
-    // boost only a clear loser: all regions known and the lowest share strictly below the next one
-    const weakest = known.length === cfg.areas.length && share[sorted[0]]! < share[sorted[1]]! ? sorted[0] : null;
+    // key region = largest market for this product in the latest ZMARKET window (none known → all regions)
+    const vol: Partial<Record<Area, number>> = {};
+    if (lastMarket !== null) for (const ar of cfg.areas) vol[ar] = sum(ds.market.filter((r) => r.material === sku && r.area === ar && r.gameDay === lastMarket).map((r) => r.quantity));
+    const key = cfg.areas.some((ar) => (vol[ar] ?? 0) > 0) ? [...cfg.areas].sort((a, b) => (vol[b] ?? 0) - (vol[a] ?? 0))[0] : null;
 
     for (const area of cfg.areas) {
-      const advise = reacts && hasStock;
-      const boost = advise && area === weakest ? 1.5 : 1;
+      const isKey = key === null || area === key;
+      const advise = reacts && hasStock && isKey && base > 0;
       out.push({
         sku,
         mat: m.mat(sku),
@@ -61,17 +62,20 @@ export function marketingTable(m: Model): MarketingRow[] {
         sensitivity,
         coverDays: cover,
         share: share[area] ?? null,
-        eurPerDay: advise ? Math.round((base * boost) / 50) * 50 : 0,
+        eurPerDay: advise ? Math.max(10, Math.round(base / 10) * 10) : 0,
         advise,
-        reason: !reacts
-          ? `DC ${dcs.join('/')} na reklamu skoro nereaguje`
-          : !hasStock
-            ? 'málo zboží – reklama by jen pálila peníze'
-            : m.pregame
-              ? 'start: malá částka, sleduj prodeje'
-              : area === weakest
-                ? 'nejnižší podíl na trhu – nejvíc prostoru růst (+50 %)'
-                : `zboží je (pokrytí ${cover === null ? '∞' : fmtNum(cover, 1)} dne)`,
+        reason:
+          base <= 0
+            ? 'marketing vypnutý (Nastavení)'
+            : !reacts
+              ? `DC ${dcs.join('/')} na reklamu skoro nereaguje`
+              : !hasStock
+                ? 'málo zboží – reklama by jen pálila peníze'
+                : !isKey
+                  ? `jen klíčový region ${key} – jinde 0 (šetříme)`
+                  : key === null
+                    ? 'symbolická částka, sleduj prodeje'
+                    : `klíčový region (největší trh, pokrytí ${cover === null ? '∞' : fmtNum(cover, 1)} dne) – symbolicky`,
       });
     }
   }

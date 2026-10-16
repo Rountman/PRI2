@@ -9,8 +9,8 @@ export function Marketing({ s }: { s: StateResponse }) {
   return (
     <Panel title="ZADS – denní marketing per výrobek × region">
       <p className="mb-3 text-sm text-mute">
-        V ZADS se zadává pro každý výrobek a každý region (Sever / Jih / Západ) zvlášť. 500 g jde do malých obchodů DC 14 (reklama účinná), 1 kg do DC 10/12 (méně). Reklama jen tam, kde je zboží. Region s
-        nejnižším naším podílem dostane +50 %. Efekt nemáme změřený – začni takhle a sleduj prodeje. [ODHAD]
+        V ZADS se zadává pro každý výrobek a každý region (Sever / Jih / Západ) zvlášť. Podle feedbacku po kole 2 (marketing 1,34 % tržeb se nevyplatil) jen symbolicky: výrobek skladem, jen klíčový region
+        (největší trh výrobku v ZMARKET), 500 g ≈ 100 €/den, 1 kg ≈ 50 €/den. Všude jinde 0. Částku mění Nastavení → „Reklama €/region/den“ (0 = vypnout).
       </p>
       <table className="num w-full text-sm">
         <thead className="text-left text-mute">
@@ -40,7 +40,9 @@ export function Marketing({ s }: { s: StateResponse }) {
           ))}
         </tbody>
       </table>
-      <p className="mt-2 text-sm text-mute">Celkem {fmtEUR(total)} za den.</p>
+      <p className="mt-2 text-sm text-mute">
+        Celkem {fmtEUR(total)} za den = {fmtEUR(total * 20)} za kolo.
+      </p>
     </Panel>
   );
 }

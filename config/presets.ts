@@ -73,7 +73,7 @@ const EXTENDED: GameConfig = {
   maxCards: 12, // rows in the 'Co se děje' table
   maxCritical: 2,
 
-  marketingEurPerRegionDay: 1_000,
+  marketingEurPerRegionDay: 100, // feedback po kole 2: jen symbolicky (500 g 100 €, 1 kg 50 €), 0 = vypnout
   // market size per team per week: Job aid Manufacturing Extended (HEC Montréal, 2020) – DC12 €220k, DC14 €130k
   channels: [
     { dc: '10', name: 'Hypermarkety', sizes: ['1kg'], marketPer5DaysPerTeam: 90_000, priceSensitivity: 'velmi vysoká', marketingSensitivity: 'nízká' },
