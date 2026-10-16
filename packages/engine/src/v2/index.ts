@@ -8,3 +8,4 @@ export * from './cards.ts';
 export * from './marketing.ts';
 export * from './assortment.ts';
 export * from './status.ts';
+export * from './market.ts';

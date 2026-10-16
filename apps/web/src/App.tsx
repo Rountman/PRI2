@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { api, type IngestResult, type StateResponse } from './api.ts';
-import { Channels, Findings, Plant, Products } from './components/Status.tsx';
+import { Channels, Findings, Market, Plant, Products } from './components/Status.tsx';
 import { Md61Table, Vk32Table } from './components/Tables.tsx';
 import { DataChips, DropZone, PhasePicker, ValuationBadge } from './components/TopBar.tsx';
 import { cx, SidePanelProvider } from './components/ui.tsx';
@@ -116,6 +116,7 @@ export function Shell({ s, online, lastOk, initialDrawer = null }: { s: StateRes
       <main className="space-y-4 p-4">
         <Findings s={s} />
         <Products s={s} />
+        <Market s={s} />
         <div className="grid gap-4 xl:grid-cols-2">
           <Channels s={s} />
           <Plant s={s} />

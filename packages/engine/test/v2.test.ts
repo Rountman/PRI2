@@ -191,6 +191,30 @@ describe('marketing (ZADS) per product × region', () => {
   });
 });
 
+describe('market overview (ZMARKET) and products we do not make', () => {
+  const six = resolveConfig({ preset: 'intro', assortment: ['F01', 'F02', 'F03', 'F04', 'F11', 'F13'] });
+  it('lists all products of the latest window, sorted by revenue, produced flag', () => {
+    const mo = buildSnapshot(fixtureDataset(), six).status.market!;
+    expect(mo.rows.length).toBeGreaterThanOrEqual(8); // every product sold by anyone in the window (Original/Mixed only when someone sells them)
+    for (let i = 1; i < mo.rows.length; i++) expect(mo.rows[i - 1].revenue).toBeGreaterThanOrEqual(mo.rows[i].revenue);
+    expect(mo.rows.find((r) => r.sku === 'F12')!.produced).toBe(false);
+    expect(mo.rows.reduce((a, r) => a + r.revenueShare, 0)).toBeCloseTo(1, 6);
+  });
+
+  it('recommends a strong product we do not make (F12) – as advice, assortment unchanged', () => {
+    const s = buildSnapshot(fixtureDataset(), six);
+    const rec = s.cards.find((c) => c.id.startsWith('market:missed:F12'))!;
+    expect(rec.title).toMatch(/^Zvážit zařazení GG-F12 do sortimentu místo GG-F0/);
+    expect(rec.observation).toMatch(/GG-F12 má .* tržeb trhu .* a my ho nevyrábíme/);
+    expect(s.assortment.current).not.toContain('F12');
+  });
+
+  it('nothing before the game or without ZMARKET', () => {
+    expect(buildSnapshot(emptyDataset(), ext).status.market).toBeNull();
+    expect(buildSnapshot(only(['InventoryReport.xlsx', 'SalesReport.xlsx']), six).status.market).toBeNull();
+  });
+});
+
 describe('setup marginal table', () => {
   it('stops at the first step below payback', () => {
     const t = setupMarginalTable(ext, { currentSpend: 0, changeoversPerRound: 10, marginPerUnit: 4.5, remainingRounds: 4 });

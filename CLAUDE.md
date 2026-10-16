@@ -71,7 +71,7 @@ Appka zobrazí **startovní checklist** v pořadí (každý bod = akční karta 
 7. Připomínka: **2. MRP cyklus spustit nejpozději den 4–5**, aby suroviny dorazily dřív, než doběhne 1. cyklus (lead time až 5 dní).
 
 ### 4.2 Během kola (data nahraná)
-Appka **hlásí stav, ne úkoly**: tabulka „Co se děje → doporučení“ (max 12 řádků, podle dopadu v €, max 2 červené), Přehled výrobků, Obchody (DC, 5 dní), Výroba a sklady, MD61, VK32. Žádné kroky ani ✓ – SAP hodnoty a postup jsou v detailu pod (?).
+Appka **hlásí stav, ne úkoly**: tabulka „Co se děje → doporučení“ (max 12 řádků, podle dopadu v €, max 2 červené), Přehled výrobků, **Trh** (poslední ZMARKET: všechny výrobky všech týmů, i ty, co nevyrábíme; nevyráběný výrobek s tržbami × marží > nejslabší vyráběný × 1,2 → doporučení „Zvážit zařazení“, sortiment se sám nemění), Obchody (DC, 5 dní), Výroba a sklady, MD61, VK32. Žádné kroky ani ✓ – SAP hodnoty a postup jsou v detailu pod (?).
 
 ## 5. Výpočty (čisté funkce v `packages/engine`, každá s testem)
 ### 5.1 Poptávka per SKU

@@ -91,6 +91,7 @@ describe('e2e: one screen', () => {
     expect(getByTestId('products').textContent).toMatch(/vyprodáno|dochází/);
     expect(getByTestId('channels').textContent).toContain('DC 12');
     expect(getByTestId('plant').textContent).toContain('Suroviny');
+    expect(getByTestId('market').textContent).toContain('GG-F13');
     expect(getByTestId('md61').textContent).toContain('F13');
   });
 

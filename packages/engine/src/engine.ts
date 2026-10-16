@@ -8,6 +8,7 @@ import { avgMargin, capacityAdvice, changeoversPerRound, loanAdvice, setupMargin
 import type { AssortmentReview } from './v2/assortment.ts';
 import { marketingTable, type MarketingRow } from './v2/marketing.ts';
 import { dcStatus, plantStatus, type DcRow, type PlantStatus } from './v2/status.ts';
+import { marketOverview, missedProducts, type MarketOverview } from './v2/market.ts';
 import { md61Plan, type Md61Plan } from './v2/md61.ts';
 import { buildModel } from './v2/model.ts';
 import { vk32Table, type Vk32Table } from './v2/vk32.ts';
@@ -22,7 +23,7 @@ export type Snapshot = {
   md61: Md61Plan;
   vk32: Vk32Table;
   marketing: MarketingRow[];
-  status: { dcs: DcRow[]; plant: PlantStatus };
+  status: { dcs: DcRow[]; plant: PlantStatus; market: MarketOverview };
   assortment: { current: string[]; review: AssortmentReview | null };
   invest: { loan: LoanAdvice; setup: SetupStep[]; capacity: CapacityAdvice; avgMargin: number; changeoversPerRound: number };
   analysis: Analysis; // for Rozšířené
@@ -36,6 +37,7 @@ export function buildSnapshot(ds: Dataset, cfg: GameConfig, opts: SnapshotOption
   const m = buildModel(ds, cfg, analysis);
   const md61 = md61Plan(m);
   const vk32 = vk32Table(m);
+  const market = marketOverview(m);
   const errors: string[] = [];
   const safe = (name: string, f: () => ActionCard[]) => {
     try {
@@ -47,7 +49,7 @@ export function buildSnapshot(ds: Dataset, cfg: GameConfig, opts: SnapshotOption
   };
   let cards = m.pregame
     ? safe('checklist', () => pregameChecklist(m, md61, vk32))
-    : selectCards([...safe('alerts', () => alerts(m, md61, vk32)), ...safe('round', () => roundCards(m, md61, vk32))], cfg.maxCards, cfg.maxCritical);
+    : selectCards([...safe('alerts', () => alerts(m, md61, vk32)), ...safe('round', () => roundCards(m, md61, vk32)), ...safe('market', () => missedProducts(m, market))], cfg.maxCards, cfg.maxCritical);
   cards = cards.map((c) => ({ ...c, done: !!opts.done?.[c.id] }));
 
   const margin = avgMargin(m);
@@ -68,7 +70,7 @@ export function buildSnapshot(ds: Dataset, cfg: GameConfig, opts: SnapshotOption
     md61,
     vk32,
     marketing: marketingTable(m),
-    status: { dcs: dcStatus(m), plant: plantStatus(m, md61) },
+    status: { dcs: dcStatus(m), plant: plantStatus(m, md61), market },
     assortment: { current: m.assortment, review: m.review },
     invest: {
       loan: loanAdvice(cfg, { cash: m.cash, loan: m.loan, rawNextCycle: md61.materials.cost, remainingDays: m.remainingDays }),

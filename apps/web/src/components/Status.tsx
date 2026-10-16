@@ -217,3 +217,58 @@ export function Plant({ s }: { s: StateResponse }) {
     </Panel>
   );
 }
+
+/** All products from the latest ZMARKET window – also those we don't make. */
+export function Market({ s }: { s: StateResponse }) {
+  const mo = s.snapshot.status.market;
+  if (!mo) return null;
+  return (
+    <Panel
+      title={`Trh – všechny týmy, posledních 5 dní (ZMARKET den ${mo.gameDay})`}
+      right={
+        <Info title="Trh">
+          <p>Všechny výrobky, které v posledních 5 dnech prodal kterýkoli tým, podle tržeb celého trhu. Šedé = nevyrábíme.</p>
+          <p>Když nevyráběný výrobek vychází (tržby × marže) o 20 % lépe než náš nejslabší, objeví se doporučení v „Co se děje“. Sortiment se sám nemění – zaškrtává se v Nastavení.</p>
+        </Info>
+      }
+    >
+      <div className="overflow-x-auto">
+        <table className="num w-full text-[0.95rem]" data-testid="market">
+          <thead className="text-left text-sm text-mute">
+            <tr>
+              <th className="py-1">Výrobek</th>
+              <th>vyrábíme</th>
+              <th className="text-right">podíl tržeb trhu</th>
+              <th className="text-right">prodáno trh</th>
+              <th className="text-right">cena trhu</th>
+              <th className="text-right">náš podíl</th>
+              <th className="text-right">marže</th>
+            </tr>
+          </thead>
+          <tbody>
+            {mo.rows.map((r) => (
+              <tr key={r.sku} className={cx('border-t border-line/60', !r.produced && 'text-mute')}>
+                <td className="py-1.5" title={r.label}>
+                  <b className={r.produced ? undefined : 'font-semibold'}>{r.mat}</b> <span className="text-sm text-mute">{r.label.replace(/ \(F\d\d\)$/, '')}</span>
+                </td>
+                <td>{r.produced ? <Badge tone="good">ano</Badge> : <Badge tone="none">ne</Badge>}</td>
+                <td className="text-right">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-2 w-20 overflow-hidden rounded bg-panel2">
+                      <span className="block h-full bg-accent" style={{ width: `${Math.min(100, r.revenueShare * 100 * 4)}%` }} />
+                    </span>
+                    {fmtPct(r.revenueShare, 1)}
+                  </span>
+                </td>
+                <td className="text-right">{k(r.qty)}</td>
+                <td className="text-right">{fmtNum(r.price, 2)}</td>
+                <td className="text-right">{r.ourQty ? fmtPct(r.ourShare, 1) : '–'}</td>
+                <td className="text-right">{fmtPct(r.marginRate)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
+  );
+}
